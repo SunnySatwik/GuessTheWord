@@ -1,10 +1,12 @@
 from collections.abc import Generator
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+# Ensure all models are registered on Base.metadata
+import app.models  # noqa: F401
 from app.database import Base, get_db
 from app.main import app
 
@@ -16,6 +18,16 @@ test_engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+
+@event.listens_for(test_engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable foreign key enforcement on SQLite test engine."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 TestingSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
