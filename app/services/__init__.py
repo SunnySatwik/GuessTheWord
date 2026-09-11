@@ -8,6 +8,15 @@ from app.services.auth_service import (
     register_user,
     verify_password,
 )
+from app.services.game_service import (
+    count_daily_games,
+    evaluate_guess,
+    get_game_state,
+    start_game,
+    submit_guess,
+    validate_guess,
+)
+from app.services.word_seed import seed_words
 
 __all__ = [
     "hash_password",
@@ -18,4 +27,11 @@ __all__ = [
     "get_user_by_id",
     "register_user",
     "authenticate_user",
+    "seed_words",
+    "evaluate_guess",
+    "count_daily_games",
+    "start_game",
+    "validate_guess",
+    "submit_guess",
+    "get_game_state",
 ]

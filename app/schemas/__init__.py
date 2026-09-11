@@ -5,6 +5,13 @@ from app.schemas.auth import (
     validate_password,
     validate_username,
 )
+from app.schemas.game import (
+    GameStateResponse,
+    GuessResultResponse,
+    GuessSubmissionRequest,
+    LetterResult,
+    StartGameResponse,
+)
 
 __all__ = [
     "UserRegisterSchema",
@@ -12,4 +19,9 @@ __all__ = [
     "UserResponseSchema",
     "validate_username",
     "validate_password",
+    "LetterResult",
+    "GuessSubmissionRequest",
+    "GuessResultResponse",
+    "StartGameResponse",
+    "GameStateResponse",
 ]

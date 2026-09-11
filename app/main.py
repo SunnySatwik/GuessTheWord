@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import BASE_DIR, settings
 from app.models.user import User
 from app.routes.auth import get_current_user, router as auth_router
+from app.routes.game import router as game_router
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -23,8 +24,9 @@ app.mount(
 # Configure Jinja2 templates directory
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 
-# Include Authentication Routes
+# Include Application Routers
 app.include_router(auth_router)
+app.include_router(game_router)
 
 
 @app.get("/health")

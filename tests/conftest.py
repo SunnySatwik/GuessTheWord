@@ -51,6 +51,10 @@ def db_session() -> Generator[Session, None, None]:
         yield session
     finally:
         session.rollback()
+        # Clean up all table records for test isolation
+        for table in reversed(Base.metadata.sorted_tables):
+            session.execute(table.delete())
+        session.commit()
         session.close()
 
 
