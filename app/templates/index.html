@@ -9,7 +9,7 @@
         <span class="status-text">Application Online</span>
     </div>
     <h2>Backend Foundation Verified</h2>
-    <p class="subtitle">FastAPI backend, Jinja2 templating, and SQLite database layer are initialized.</p>
+    <p class="subtitle">FastAPI backend, SQLAlchemy 2.x SQLite models, and Argon2 authentication are active.</p>
 
     <div class="info-grid">
         <div class="info-item">
@@ -21,14 +21,26 @@
             <span class="info-value badge">{{ environment }}</span>
         </div>
         <div class="info-item">
-            <span class="info-label">Status</span>
-            <span class="info-value badge success">{{ status }}</span>
+            <span class="info-label">Current Session</span>
+            {% if user %}
+                <span class="info-value badge success">{{ user.username }} ({{ user.role.value }})</span>
+            {% else %}
+                <span class="info-value badge">Guest (Unauthenticated)</span>
+            {% endif %}
         </div>
     </div>
 
     <div class="quick-links">
-        <a href="/health" class="btn btn-secondary">Check Health Endpoint (JSON)</a>
-        <a href="/docs" class="btn btn-primary">API Documentation</a>
+        {% if user %}
+            <form action="/logout" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary">Log Out</button>
+            </form>
+        {% else %}
+            <a href="/login" class="btn btn-primary">Log In</a>
+            <a href="/register" class="btn btn-secondary">Register New User</a>
+        {% endif %}
+        <a href="/health" class="btn btn-secondary">Health Endpoint</a>
+        <a href="/docs" class="btn btn-secondary">API Docs</a>
     </div>
 </section>
 {% endblock %}

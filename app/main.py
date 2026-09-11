@@ -1,9 +1,11 @@
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import BASE_DIR, settings
+from app.models.user import User
+from app.routes.auth import get_current_user, router as auth_router
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -21,6 +23,9 @@ app.mount(
 # Configure Jinja2 templates directory
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 
+# Include Authentication Routes
+app.include_router(auth_router)
+
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
@@ -33,8 +38,11 @@ def health_check() -> dict[str, str]:
 
 
 @app.get("/", response_class=HTMLResponse)
-def root(request: Request) -> HTMLResponse:
-    """Development verification page confirming templates and routing function properly."""
+def root(
+    request: Request,
+    user: User | None = Depends(get_current_user),
+) -> HTMLResponse:
+    """Development verification page confirming templates, routing, and user session."""
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -42,5 +50,6 @@ def root(request: Request) -> HTMLResponse:
             "app_name": settings.app_name,
             "environment": settings.app_env,
             "status": "online",
+            "user": user,
         },
     )

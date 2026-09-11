@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Register &bull; Guess the Word{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="card auth-card">
+        <div class="auth-header">
+            <h2>Create an Account</h2>
+            <p class="subtitle">Sign up to start playing Guess the Word</p>
+        </div>
+
+        {% if error %}
+            <div class="alert alert-error" role="alert">
+                <span class="alert-icon">&excl;</span>
+                <span>{{ error }}</span>
+            </div>
+        {% endif %}
+
+        <form action="/register" method="post" class="auth-form" novalidate>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="form-control"
+                    placeholder="Choose a username (min 5 characters)"
+                    value="{{ username or '' }}"
+                    minlength="5"
+                    required
+                    autofocus
+                    autocomplete="username"
+                >
+                <small class="field-hint">Must be at least 5 characters long.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-control"
+                    placeholder="Create a strong password"
+                    required
+                    autocomplete="new-password"
+                >
+                <div class="password-rules">
+                    <span class="rules-title">Password must contain:</span>
+                    <ul>
+                        <li>At least 5 characters</li>
+                        <li>At least one alphabetic character (a-z, A-Z)</li>
+                        <li>At least one numeric character (0-9)</li>
+                        <li>At least one special character: <strong>$</strong>, <strong>%</strong>, <strong>*</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="/login" class="link">Log in here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
