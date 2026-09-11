@@ -1,2 +1,24 @@
+# Environment & Virtual Environment
 .env
-.venv
+.venv/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest & Testing Cache
+.pytest_cache/
+
+# SQLite Databases (preserves data directory via .gitkeep)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db
+*.sqlite3
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

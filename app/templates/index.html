@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Home &bull; {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="card verification-card">
+    <div class="status-indicator">
+        <span class="status-dot"></span>
+        <span class="status-text">Application Online</span>
+    </div>
+    <h2>Backend Foundation Verified</h2>
+    <p class="subtitle">FastAPI backend, Jinja2 templating, and SQLite database layer are initialized.</p>
+
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">Application</span>
+            <span class="info-value">{{ app_name }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Environment</span>
+            <span class="info-value badge">{{ environment }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Status</span>
+            <span class="info-value badge success">{{ status }}</span>
+        </div>
+    </div>
+
+    <div class="quick-links">
+        <a href="/health" class="btn btn-secondary">Check Health Endpoint (JSON)</a>
+        <a href="/docs" class="btn btn-primary">API Documentation</a>
+    </div>
+</section>
+{% endblock %}
