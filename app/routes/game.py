@@ -36,6 +36,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 @router.get("/", response_class=HTMLResponse)
 def game_page(
     request: Request,
+    game_id: str | None = None,
     user: User | None = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -56,6 +57,7 @@ def game_page(
             "user": user,
             "games_today": games_today,
             "max_daily_games": MAX_DAILY_GAMES,
+            "game_id": game_id or "",
         },
     )
 

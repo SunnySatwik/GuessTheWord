@@ -208,6 +208,26 @@
     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.4);
 }
 
+.btn-game-action:disabled,
+.btn-game-action.is-loading {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-spinner-sm {
+    display: inline-block;
+    width: 0.85rem;
+    height: 0.85rem;
+    border: 2px solid rgba(15, 23, 42, 0.3);
+    border-top-color: #0f172a;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: -0.1rem;
+    margin-right: 0.35rem;
+}
+
 .state-completed {
     background: rgba(30, 41, 59, 0.85);
     border: 1px solid var(--border-color);
@@ -231,6 +251,19 @@
     font-size: 0.9rem;
     color: var(--text-secondary);
     margin: 0;
+}
+
+.completion-target-wrapper {
+    margin-top: 0.6rem;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.completion-target {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--accent-color);
+    text-transform: uppercase;
 }
 
 .state-limit {
@@ -328,6 +361,11 @@
     grid-template-columns: repeat(5, 1fr);
     gap: clamp(5px, 1.5vw, 8px);
     width: 100%;
+}
+
+/* Active row indicator for current unsubmitted attempt */
+.board-row.is-active .board-tile {
+    border-color: rgba(148, 163, 184, 0.5);
 }
 
 .board-tile {

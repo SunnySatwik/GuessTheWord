@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="game-page-container">
+<div class="game-page-container" data-game-id="{{ game_id or '' }}">
     <!-- Compact Game Header -->
     <header class="game-header">
         <div class="header-content">
@@ -37,8 +37,8 @@
         <!-- Ready State Banner -->
         <div class="state-panel state-ready" id="state-ready">
             <p class="state-message">Guess the secret 5-letter English word within 5 attempts.</p>
-            <button type="button" class="btn btn-primary btn-game-action" id="btn-start-game">
-                Start Game
+            <button type="button" class="btn btn-primary btn-game-action" id="action-start-game">
+                <span id="btn-start-game" class="btn-text">Start Game</span>
             </button>
         </div>
 
@@ -47,12 +47,15 @@
             <div class="completion-icon" aria-hidden="true">&#9733;</div>
             <h3 class="completion-title" id="completion-title">Game Finished</h3>
             <p class="completion-message" id="completion-message"></p>
+            <p class="completion-target-wrapper is-hidden" id="completion-target-wrapper">
+                The secret word was <strong class="completion-target" id="completion-target"></strong>
+            </p>
         </div>
 
         <!-- Daily Limit Reached Banner (Conditional / Dynamic) -->
         <div class="state-panel state-limit {% if games_today < max_daily_games %}is-hidden{% endif %}" id="state-limit">
             <span class="limit-tag">Daily Limit Reached</span>
-            <p class="limit-message">You have completed your 3 game sessions for today. Come back tomorrow for new words!</p>
+            <p class="limit-message" id="limit-message">You have completed your 3 game sessions for today. Come back tomorrow for new words!</p>
         </div>
 
         <!-- Loading State Banner (Hidden Initially) -->

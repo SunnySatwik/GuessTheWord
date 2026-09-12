@@ -596,3 +596,430 @@ def test_game_js_contains_tile_dom_helpers(client: TestClient):
     assert "revealTile" in js
 
 
+# ============================================================================
+# 10. Real Game State -> Guess Board Integration (Phase 4B-2C)
+# ============================================================================
+
+
+def test_game_page_without_game_id_renders_ready_state(client: TestClient, db_session: Session):
+    """Verify /game without game_id leaves data-game-id empty and ready."""
+    user = register_user(db_session, username="gamereadyuser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.get("/game")
+    assert response.status_code == status.HTTP_200_OK
+    assert 'data-game-id=""' in response.text
+    assert 'id="state-ready"' in response.text
+
+
+def test_game_page_with_game_id_renders_container_attr(client: TestClient, db_session: Session):
+    """Verify /game?game_id=123 populates the container's data-game-id attribute."""
+    user = register_user(db_session, username="gameiduser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.get("/game?game_id=123")
+    assert response.status_code == status.HTTP_200_OK
+    assert 'data-game-id="123"' in response.text
+
+
+def test_game_page_active_game_does_not_leak_target_word(client: TestClient, db_session: Session):
+    """Verify that the secret target word is never embedded into the /game page HTML."""
+    seed_words(db_session)
+    user = register_user(db_session, username="secretuser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    # Start an active game
+    start_res = client.post("/game/start")
+    assert start_res.status_code == status.HTTP_201_CREATED
+    game_id = start_res.json()["game_id"]
+
+    # Retrieve game from DB to get the actual target word
+    game = db_session.get(Game, game_id)
+    assert game is not None
+    target_word = game.word.word
+
+    # Render game page for this game
+    response = client.get(f"/game?game_id={game_id}")
+    assert response.status_code == status.HTTP_200_OK
+    html = response.text
+
+    # Target word must not appear in HTML
+    assert target_word not in html
+    assert 'id="completion-target"' in html
+
+
+def test_api_get_game_state_in_progress_structure(client: TestClient, db_session: Session):
+    """Verify GET /game/{game_id} conceals target word and returns attempts and guesses."""
+    seed_words(db_session)
+    user = register_user(db_session, username="stateuser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    # Start game
+    start_res = client.post("/game/start")
+    game_id = start_res.json()["game_id"]
+    game_obj = db_session.get(Game, game_id)
+    guess_word = "CRANE" if game_obj.word.word != "CRANE" else "PLANT"
+
+    # Submit 1 guess
+    guess_res = client.post(f"/game/{game_id}/guess", json={"guess": guess_word})
+    assert guess_res.status_code == status.HTTP_200_OK
+
+    # Fetch game state
+    get_res = client.get(f"/game/{game_id}")
+    assert get_res.status_code == status.HTTP_200_OK
+    data = get_res.json()
+
+    assert data["game_id"] == game_id
+    assert data["status"] == GameStatus.IN_PROGRESS
+    assert data["attempts"] == 1
+    assert data["max_attempts"] == 5
+    assert data["is_active"] is True
+    assert data["target_word"] is None  # Strictly concealed
+    assert len(data["guesses"]) == 1
+    assert data["guesses"][0]["attempt_number"] == 1
+    assert data["guesses"][0]["guess"] == guess_word
+    assert len(data["guesses"][0]["evaluations"]) == 5
+
+
+def test_api_get_game_state_completed_reveals_target(client: TestClient, db_session: Session):
+    """Verify GET /game/{game_id} reveals target word once game is completed."""
+    user = register_user(db_session, username="wonuser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    word = Word(word="FLAME")
+    db_session.add(word)
+    db_session.commit()
+
+    game = Game(user_id=user.id, word_id=word.id, status=GameStatus.IN_PROGRESS, attempts=0)
+    db_session.add(game)
+    db_session.commit()
+
+    # Win game by guessing target word
+    submit_guess(db_session, game.id, user.id, "FLAME")
+
+    # Fetch game state
+    get_res = client.get(f"/game/{game.id}")
+    assert get_res.status_code == status.HTTP_200_OK
+    data = get_res.json()
+
+    assert data["status"] == GameStatus.WON
+    assert data["is_active"] is False
+    assert data["target_word"] == "FLAME"  # Revealed upon completion
+
+
+def test_api_get_game_state_unauthorized_other_user(client: TestClient, db_session: Session):
+    """Verify GET /game/{game_id} returns 403 Forbidden when requested by another player."""
+    seed_words(db_session)
+    user1 = register_user(db_session, username="ownerplayer", password="Password1$")
+    user2 = register_user(db_session, username="intruderplayer", password="Password1$")
+
+    # User 1 starts game
+    token1 = create_session_token(user1.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token1)
+    start_res = client.post("/game/start")
+    game_id = start_res.json()["game_id"]
+
+    # User 2 attempts to fetch User 1's game
+    token2 = create_session_token(user2.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token2)
+    get_res = client.get(f"/game/{game_id}")
+    assert get_res.status_code == status.HTTP_403_FORBIDDEN
+    assert "access" in get_res.json()["detail"].lower()
+
+
+def test_api_get_game_state_not_found(client: TestClient, db_session: Session):
+    """Verify GET /game/{game_id} returns 404 for a nonexistent game ID."""
+    user = register_user(db_session, username="notfounduser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    get_res = client.get("/game/999999")
+    assert get_res.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in get_res.json()["detail"].lower()
+
+
+def test_game_js_contains_state_integration_methods(client: TestClient):
+    """Verify game.js contains all methods required for game state integration."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "loadGameState" in js
+    assert "renderGameState" in js
+    assert "renderGuess" in js
+    assert "resetBoard" in js
+    assert "setActiveRow" in js
+    assert "showCompletedState" in js
+    assert "showError" in js
+
+
+# ============================================================================
+# 11. Start Game UI -> Backend Integration (Phase 4B-3A)
+# ============================================================================
+
+
+def test_start_game_button_exists_in_template(client: TestClient, db_session: Session):
+    """Verify Start Game button exists in template with both action-start-game and btn-start-game IDs."""
+    user = register_user(db_session, username="startbtnuser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.get("/game")
+    assert response.status_code == status.HTTP_200_OK
+    html = response.text
+
+    assert 'id="action-start-game"' in html
+    assert 'id="btn-start-game"' in html
+    assert 'Start Game' in html
+    assert 'id="limit-message"' in html
+
+
+def test_no_automatic_game_creation_on_page_load(client: TestClient, db_session: Session):
+    """Verify navigating to /game without game_id does NOT create any game in the database."""
+    user = register_user(db_session, username="nogameuser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    initial_games = db_session.query(Game).filter_by(user_id=user.id).count()
+    assert initial_games == 0
+
+    response = client.get("/game")
+    assert response.status_code == status.HTTP_200_OK
+
+    current_games = db_session.query(Game).filter_by(user_id=user.id).count()
+    assert current_games == 0
+    assert 'id="state-ready"' in response.text
+
+
+def test_today_counter_renders_dynamic_backend_count(client: TestClient, db_session: Session):
+    """Verify the Today / Daily Limit counter renders actual games_today count, not a hardcoded 0."""
+    seed_words(db_session)
+    user = register_user(db_session, username="counteruser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    # Initially 0 games played today
+    res0 = client.get("/game")
+    assert res0.status_code == status.HTTP_200_OK
+    assert 'id="daily-games-display">0 / 3<' in res0.text
+
+    # Start 1st game
+    start_game(db_session, user.id)
+    res1 = client.get("/game")
+    assert res1.status_code == status.HTTP_200_OK
+    assert 'id="daily-games-display">1 / 3<' in res1.text
+
+    # Start 2nd game
+    start_game(db_session, user.id)
+    res2 = client.get("/game")
+    assert res2.status_code == status.HTTP_200_OK
+    assert 'id="daily-games-display">2 / 3<' in res2.text
+
+    # Start 3rd game
+    start_game(db_session, user.id)
+    res3 = client.get("/game")
+    assert res3.status_code == status.HTTP_200_OK
+    assert 'id="daily-games-display">3 / 3<' in res3.text
+
+
+def test_api_start_game_success_contract(client: TestClient, db_session: Session):
+    """Verify POST /game/start returns HTTP 201 with game_id, status IN_PROGRESS, and attempts 0."""
+    seed_words(db_session)
+    user = register_user(db_session, username="starteruser", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.post("/game/start")
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+
+    assert "game_id" in data
+    assert isinstance(data["game_id"], int)
+    assert data["status"] == GameStatus.IN_PROGRESS
+    assert data["attempts"] == 0
+    assert data["max_attempts"] == 5
+    assert "started_at" in data
+    assert "target_word" not in data
+
+
+def test_api_start_game_daily_limit_contract_429(client: TestClient, db_session: Session):
+    """Verify POST /game/start returns 429 when daily limit of 3 games has been reached."""
+    seed_words(db_session)
+    user = register_user(db_session, username="limitplayer", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    # Start 3 games successfully
+    for _ in range(3):
+        res = client.post("/game/start")
+        assert res.status_code == status.HTTP_201_CREATED
+
+    # 4th attempt rejected with 429
+    res4 = client.post("/game/start")
+    assert res4.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    data = res4.json()
+    assert "detail" in data
+    assert "daily limit reached" in data["detail"].lower()
+
+
+def test_api_start_game_unauthenticated_contract_401(client: TestClient):
+    """Verify POST /game/start returns 401 when user is not authenticated."""
+    response = client.post("/game/start", headers={"Accept": "application/json"})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "detail" in response.json()
+
+
+def test_game_js_contains_start_game_integration_methods(client: TestClient):
+    """Verify game.js contains the start game UI integration methods and handlers."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "startGame" in js
+    assert "handleStartGameResponse" in js
+    assert "setStartButtonLoading" in js
+    assert "handleStartGameError" in js
+    assert "action-start-game" in js
+    assert "/game/start" in js
+    assert "location.assign" in js
+
+
+def test_game_js_start_game_never_references_target_word(client: TestClient):
+    """Verify start-game handling in game.js never attempts to read or leak target_word."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    start_idx = js.find("startGame()")
+    resp_idx = js.find("handleStartGameResponse(")
+    end_idx = js.find("handleStartGameError(")
+    start_block = js[start_idx:end_idx]
+
+    assert "target_word" not in start_block
+
+
+# ============================================================================
+# 12. Guess Input Architecture (Phase 4B-3B)
+# ============================================================================
+
+
+def test_game_js_contains_guess_input_methods(client: TestClient):
+    """Verify game.js contains all required methods and state properties for guess input."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "bindKeyboardEvents" in js
+    assert "canAcceptInput" in js
+    assert "handleKeyDown" in js
+    assert "handleLetterInput" in js
+    assert "handleBackspace" in js
+    assert "handleSubmitRequest" in js
+    assert "clearCurrentInput" in js
+    assert "syncCurrentInput" in js
+    assert "currentInput" in js
+    assert "activeRowIndex" in js
+    assert "isKeyHandlerBound" in js
+
+
+def test_game_js_keyboard_listener_bound_once(client: TestClient):
+    """Verify game.js implements a guard ensuring keyboard listener is bound strictly once."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "if (this.isKeyHandlerBound) return;" in js
+    assert "this.isKeyHandlerBound = true;" in js
+    assert 'document.addEventListener("keydown"' in js
+
+
+def test_game_js_input_architecture_rules(client: TestClient):
+    """Verify game.js enforces alphabetic input, uppercase conversion, and length limit 5."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    # Single alphabetic character check
+    assert "/^[a-zA-Z]$/" in js
+    # Uppercase normalization
+    assert ".toUpperCase()" in js
+    # Length limit check
+    assert "this.currentInput.length >= 5" in js
+    # Backspace handling
+    assert 'key === "Backspace"' in js
+    assert "this.currentInput.slice(0, -1)" in js
+    # Enter recognition hook
+    assert 'key === "Enter"' in js
+    assert "handleSubmitRequest" in js
+
+
+def test_game_js_input_gating_guards(client: TestClient):
+    """Verify canAcceptInput requires IN_PROGRESS status, valid active row, and active session."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    can_accept_idx = js.find("canAcceptInput()")
+    can_accept_block = js[can_accept_idx:can_accept_idx + 400]
+
+    assert "IN_PROGRESS" in can_accept_block
+    assert "this.activeRowIndex >= 0" in can_accept_block
+    assert "this.activeRowIndex < 5" in can_accept_block
+    assert "this.gameState != null" in can_accept_block
+
+
+def test_game_js_no_guess_submission_api_call_on_typing(client: TestClient):
+    """Verify typing or pressing Enter does NOT trigger /guess API submission."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    # Locate handleSubmitRequest definition
+    submit_idx = js.find("handleSubmitRequest() {")
+    assert submit_idx != -1
+    submit_block = js[submit_idx:submit_idx + 400]
+
+    assert "fetch" not in submit_block
+    assert "/guess" not in submit_block
+    assert "Submission not implemented yet" in submit_block
+
+
+def test_game_persisted_guesses_remain_immutable_with_active_row(client: TestClient, db_session: Session):
+    """Verify backend state with previous guesses sets active row at attempts count without altering guesses."""
+    seed_words(db_session)
+    user = register_user(db_session, username="persistedtester", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    word = db_session.query(Word).filter_by(word="LIGHT").first()
+    assert word is not None
+
+    game = Game(user_id=user.id, word_id=word.id, status=GameStatus.IN_PROGRESS, attempts=0)
+    db_session.add(game)
+    db_session.commit()
+
+    # Submit 2 guesses
+    submit_guess(db_session, game.id, user.id, "CRANE")
+    submit_guess(db_session, game.id, user.id, "WATER")
+
+    # Fetch game state
+    state_res = client.get(f"/game/{game.id}")
+    assert state_res.status_code == status.HTTP_200_OK
+    data = state_res.json()
+
+    assert data["attempts"] == 2
+    assert len(data["guesses"]) == 2
+    assert data["guesses"][0]["guess"] == "CRANE"
+    assert data["guesses"][1]["guess"] == "WATER"
+    # Row 2 (0-indexed) must be the next active row for new typing
+    assert data["status"] == GameStatus.IN_PROGRESS
+
+
+
+
+
