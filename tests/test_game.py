@@ -452,3 +452,147 @@ def test_api_guess_submission_flow(client: TestClient, db_session: Session):
     state_data = state_res.json()
     assert state_data["game_id"] == game_id
     assert state_data["attempts"] == 1
+
+
+# ============================================================================
+# 8. Player Game Page Visual Foundation (Phase 4B-1)
+# ============================================================================
+
+
+def test_get_game_page_unauthenticated_redirects(client: TestClient):
+    """Verify unauthenticated requests to /game redirect to /login with 303."""
+    response = client.get("/game", follow_redirects=False)
+    assert response.status_code == status.HTTP_303_SEE_OTHER
+    assert response.headers["location"] == "/login"
+
+
+def test_get_game_page_unauthenticated_json_unauthorized(client: TestClient):
+    """Verify unauthenticated JSON requests to /game return 401 Unauthorized."""
+    response = client.get("/game", headers={"Accept": "application/json"})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json()["detail"] == "Authentication required"
+
+
+def test_get_game_page_authenticated(client: TestClient, db_session: Session):
+    """Verify authenticated user receives 200 HTML with all foundation UI components."""
+    user = register_user(db_session, username="pageviewer", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.get("/game")
+    assert response.status_code == status.HTTP_200_OK
+    assert "text/html" in response.headers["content-type"]
+    html = response.text
+
+    # Essential visual foundation containers
+    assert "game-page-container" in html
+    assert "game-header" in html
+    assert "game-meta" in html
+    assert "game-stage" in html
+    assert "game-controls" in html
+
+    # Status elements & badges
+    assert 'id="attempts-display"' in html
+    assert 'id="daily-games-display"' in html
+    assert 'id="game-status-badge"' in html
+    assert "0 / 5" in html
+    assert "0 / 3" in html
+
+    # State banners
+    assert 'id="state-ready"' in html
+    assert 'id="btn-start-game"' in html
+    assert 'id="state-completed"' in html
+    assert 'id="state-limit"' in html
+    assert 'id="state-loading"' in html
+    assert 'id="state-error"' in html
+
+    # 5x5 Game Board Grid Structure (Phase 4B-2A)
+    assert 'id="game-board"' in html
+    assert 'role="grid"' in html
+    assert 'id="controls-placeholder"' in html
+    assert html.count('class="board-row"') == 5
+    assert html.count('class="board-tile"') == 25
+
+    # Static assets linked
+    assert "css/game.css" in html
+    assert "js/game.js" in html
+
+
+def test_get_game_page_board_structure(client: TestClient, db_session: Session):
+    """Verify the 5x5 board contains exactly 5 rows and 25 tiles with data coordinates."""
+    user = register_user(db_session, username="boardchecker", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.get("/game")
+    assert response.status_code == status.HTTP_200_OK
+    html = response.text
+
+    # Board container
+    assert 'id="game-board"' in html
+    assert 'role="grid"' in html
+    assert 'aria-label="5 by 5 guess board"' in html
+
+    # Exactly 5 rows with correct attributes
+    for r in range(5):
+        assert f'class="board-row" role="row" data-row="{r}"' in html
+
+    # Exactly 25 tiles with coordinates
+    for r in range(5):
+        for c in range(5):
+            assert f'class="board-tile" role="gridcell" data-row="{r}" data-col="{c}"' in html
+
+
+def test_get_game_page_slash_trailing_route(client: TestClient, db_session: Session):
+    """Verify /game/ with trailing slash also renders the game page."""
+    user = register_user(db_session, username="slashviewer", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    response = client.get("/game/")
+    assert response.status_code == status.HTTP_200_OK
+    assert "game-page-container" in response.text
+
+
+# ============================================================================
+# 9. Guess Tile States & Visual Feedback (Phase 4B-2B)
+# ============================================================================
+
+
+def test_game_css_contains_tile_state_classes(client: TestClient):
+    """Verify game.css provides all evaluation, interaction, and animation state rules."""
+    response = client.get("/static/css/game.css")
+    assert response.status_code == status.HTTP_200_OK
+    css = response.text
+
+    # Evaluation and feedback classes
+    assert ".board-tile.is-filled" in css
+    assert ".board-tile.is-correct" in css
+    assert ".board-tile.is-present" in css
+    assert ".board-tile.is-absent" in css
+    assert ".board-tile.is-revealing" in css
+
+    # Color tokens
+    assert "--color-tile-correct" in css
+    assert "--color-tile-present" in css
+    assert "--color-tile-absent" in css
+
+    # Animations & accessible reduced motion
+    assert "tilePopIn" in css
+    assert "tileFlip" in css
+    assert "prefers-reduced-motion" in css
+
+
+def test_game_js_contains_tile_dom_helpers(client: TestClient):
+    """Verify game.js exports the tile DOM manipulation helpers."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "getTile" in js
+    assert "setTileLetter" in js
+    assert "setTileState" in js
+    assert "clearTile" in js
+    assert "revealTile" in js
+
+

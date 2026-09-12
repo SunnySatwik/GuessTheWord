@@ -16,6 +16,7 @@
             </a>
             <nav class="nav-links">
                 {% if user %}
+                    <a href="/game" class="nav-link">Play Game</a>
                     <span class="user-pill">
                         <span class="user-name">{{ user.username }}</span>
                         <span class="role-badge">{{ user.role.value }}</span>
@@ -40,5 +41,7 @@
             <p>&copy; 2026 Guess the Word &bull; OpenText Pre-Internship Project</p>
         </div>
     </footer>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

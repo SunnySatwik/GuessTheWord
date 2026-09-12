@@ -1,0 +1,488 @@
+/* ============================================================================
+   Guess the Word • Player Game Page Visual Foundation (Phase 4B-1)
+   ============================================================================ */
+
+:root {
+    --stage-max-width: 350px;
+    --controls-max-width: 500px;
+    --game-container-max-width: 520px;
+    --color-tile-empty: rgba(15, 23, 42, 0.7);
+    --color-tile-border: #334155;
+    --color-tile-border-filled: #64748b;
+    --color-tile-bg-filled: rgba(30, 41, 59, 0.65);
+    
+    /* Wordle-style evaluation states */
+    --color-tile-correct: #15803d;
+    --color-tile-correct-border: #16a34a;
+    --color-tile-present: #b45309;
+    --color-tile-present-border: #d97706;
+    --color-tile-absent: #334155;
+    --color-tile-absent-border: #334155;
+    --color-tile-absent-text: #94a3b8;
+
+    --color-badge-bg: rgba(56, 189, 248, 0.12);
+    --color-badge-text: #38bdf8;
+    --color-badge-active: #22c55e;
+    --color-badge-active-bg: rgba(34, 197, 94, 0.12);
+    --color-badge-lost: #ef4444;
+    --color-badge-lost-bg: rgba(239, 68, 68, 0.12);
+}
+
+/* ============================================================================
+   Layout & Container
+   ============================================================================ */
+
+.game-page-container {
+    width: 100%;
+    max-width: var(--game-container-max-width);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.5rem 1rem 1.5rem;
+}
+
+/* Tabular numbers helper for clean status metrics */
+.tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Utility to toggle state visibility */
+.is-hidden {
+    display: none !important;
+}
+
+/* ============================================================================
+   Compact Game Header
+   ============================================================================ */
+
+.game-header {
+    width: 100%;
+    text-align: center;
+    padding: 0.25rem 0;
+}
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.game-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.game-subtitle {
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ============================================================================
+   Game Meta / Status Bar
+   ============================================================================ */
+
+.game-meta {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.6rem 1.25rem;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.2);
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.meta-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.meta-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: var(--color-badge-bg);
+    color: var(--color-badge-text);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    text-transform: uppercase;
+}
+
+.status-badge.in-progress {
+    background: var(--color-badge-active-bg);
+    color: var(--color-badge-active);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.status-badge.won {
+    background: var(--color-badge-active-bg);
+    color: var(--color-badge-active);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.status-badge.lost {
+    background: var(--color-badge-lost-bg);
+    color: var(--color-badge-lost);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================================================
+   State Panels & Notifications
+   ============================================================================ */
+
+.game-state-container {
+    width: 100%;
+}
+
+.state-panel {
+    border-radius: 10px;
+    padding: 0.85rem 1.25rem;
+    text-align: center;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    transition: opacity 0.2s ease;
+}
+
+.state-ready {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.state-message {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.btn-game-action {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-game-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+
+.btn-game-action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.4);
+}
+
+.state-completed {
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid var(--border-color);
+    padding: 1.25rem;
+}
+
+.completion-icon {
+    font-size: 1.5rem;
+    color: #eab308;
+    margin-bottom: 0.35rem;
+}
+
+.completion-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.completion-message {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.state-limit {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fcd34d;
+}
+
+.limit-tag {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.limit-message {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #fef3c7;
+}
+
+.state-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--text-secondary);
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px dashed var(--border-color);
+}
+
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.state-error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.error-icon {
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* ============================================================================
+   Main Game Board (5x5 Guess Grid Foundation)
+   ============================================================================ */
+
+.game-stage {
+    width: 100%;
+    max-width: var(--stage-max-width);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0.25rem 0;
+}
+
+.game-board {
+    display: grid;
+    grid-template-rows: repeat(5, 1fr);
+    gap: clamp(5px, 1.5vw, 8px);
+    width: 100%;
+    max-width: var(--stage-max-width);
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.board-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(5px, 1.5vw, 8px);
+    width: 100%;
+}
+
+.board-tile {
+    aspect-ratio: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-tile-empty);
+    border: 2px solid var(--color-tile-border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: clamp(1.25rem, 4.5vw, 1.85rem);
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    user-select: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+/* Filled / Typed state before submission */
+.board-tile.is-filled {
+    border-color: var(--color-tile-border-filled);
+    background: var(--color-tile-bg-filled);
+    animation: tilePopIn 0.1s ease-out;
+}
+
+/* Correct state: letter and position match target */
+.board-tile.is-correct {
+    background: var(--color-tile-correct);
+    border-color: var(--color-tile-correct-border);
+    color: #ffffff;
+}
+
+/* Present state: letter in target, incorrect position */
+.board-tile.is-present {
+    background: var(--color-tile-present);
+    border-color: var(--color-tile-present-border);
+    color: #ffffff;
+}
+
+/* Absent state: letter does not occur in target */
+.board-tile.is-absent {
+    background: var(--color-tile-absent);
+    border-color: var(--color-tile-absent-border);
+    color: var(--color-tile-absent-text);
+}
+
+/* Subtle Pop-in animation when letter entered */
+@keyframes tilePopIn {
+    0% {
+        transform: scale(0.92);
+    }
+    50% {
+        transform: scale(1.04);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Flip reveal animation for submitted guess row */
+.board-tile.is-revealing {
+    animation: tileFlip 0.45s ease-in-out forwards;
+}
+
+@keyframes tileFlip {
+    0% {
+        transform: rotateX(0deg);
+    }
+    49% {
+        transform: rotateX(90deg);
+    }
+    50% {
+        transform: rotateX(90deg);
+    }
+    100% {
+        transform: rotateX(0deg);
+    }
+}
+
+/* ============================================================================
+   Lower Interaction Stage (Controls / Keyboard Foundation)
+   ============================================================================ */
+
+.game-controls {
+    width: 100%;
+    max-width: var(--controls-max-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.controls-placeholder {
+    width: 100%;
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.controls-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+}
+
+/* ============================================================================
+   Responsive Adaptations
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .game-page-container {
+        gap: 1rem;
+        padding: 0.5rem 0.75rem 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-page-container {
+        gap: 0.75rem;
+        padding: 0.25rem 0.5rem 1rem;
+    }
+
+    .game-title {
+        font-size: 1.25rem;
+    }
+
+    .game-meta {
+        padding: 0.5rem 0.9rem;
+    }
+
+    .meta-value {
+        font-size: 0.85rem;
+    }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation: none;
+    }
+    .btn-game-action {
+        transition: none;
+    }
+    .board-tile {
+        transition: none;
+    }
+    .board-tile.is-filled {
+        animation: none;
+    }
+    .board-tile.is-revealing {
+        animation: none;
+    }
+}

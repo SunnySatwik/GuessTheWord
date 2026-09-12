@@ -1,9 +1,11 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.config import BASE_DIR
 from app.database import get_db
 from app.exceptions import (
     DailyLimitReachedError,
@@ -13,18 +15,49 @@ from app.exceptions import (
     UnauthorizedGameAccessError,
 )
 from app.models.user import User
-from app.routes.auth import require_authenticated_user
+from app.routes.auth import _is_json_request, get_current_user, require_authenticated_user
 from app.schemas.game import (
     GameStateResponse,
     StartGameResponse,
 )
 from app.services.game_service import (
+    MAX_DAILY_GAMES,
+    count_daily_games,
     get_game_state,
     start_game,
     submit_guess,
 )
 
 router = APIRouter(prefix="/game", tags=["game"])
+templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+
+
+@router.get("", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
+def game_page(
+    request: Request,
+    user: User | None = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Render the player game page visual foundation. Requires authentication."""
+    if not user:
+        if _is_json_request(request):
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Authentication required"},
+            )
+        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    games_today = count_daily_games(db, user.id)
+    return templates.TemplateResponse(
+        request=request,
+        name="game/game.html",
+        context={
+            "user": user,
+            "games_today": games_today,
+            "max_daily_games": MAX_DAILY_GAMES,
+        },
+    )
 
 
 async def _extract_guess_text(request: Request) -> str:

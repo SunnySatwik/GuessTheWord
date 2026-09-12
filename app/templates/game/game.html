@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Play &bull; Guess the Word{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/game.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="game-page-container">
+    <!-- Compact Game Header -->
+    <header class="game-header">
+        <div class="header-content">
+            <h2 class="game-title">Guess the Word</h2>
+            <p class="game-subtitle">5-Letter Daily Word Challenge</p>
+        </div>
+    </header>
+
+    <!-- Game Meta / Status Bar -->
+    <section class="game-meta" aria-label="Game session information">
+        <div class="meta-item">
+            <span class="meta-label">Attempt</span>
+            <span class="meta-value tabular" id="attempts-display">0 / 5</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Daily Limit</span>
+            <span class="meta-value tabular" id="daily-games-display">{{ games_today }} / {{ max_daily_games }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Status</span>
+            <span class="status-badge" id="game-status-badge">Ready</span>
+        </div>
+    </section>
+
+    <!-- State Banners / Feedback Area -->
+    <div class="game-state-container" aria-live="polite">
+        <!-- Ready State Banner -->
+        <div class="state-panel state-ready" id="state-ready">
+            <p class="state-message">Guess the secret 5-letter English word within 5 attempts.</p>
+            <button type="button" class="btn btn-primary btn-game-action" id="btn-start-game">
+                Start Game
+            </button>
+        </div>
+
+        <!-- Completed State Banner (Hidden Initially) -->
+        <div class="state-panel state-completed is-hidden" id="state-completed">
+            <div class="completion-icon" aria-hidden="true">&#9733;</div>
+            <h3 class="completion-title" id="completion-title">Game Finished</h3>
+            <p class="completion-message" id="completion-message"></p>
+        </div>
+
+        <!-- Daily Limit Reached Banner (Conditional / Dynamic) -->
+        <div class="state-panel state-limit {% if games_today < max_daily_games %}is-hidden{% endif %}" id="state-limit">
+            <span class="limit-tag">Daily Limit Reached</span>
+            <p class="limit-message">You have completed your 3 game sessions for today. Come back tomorrow for new words!</p>
+        </div>
+
+        <!-- Loading State Banner (Hidden Initially) -->
+        <div class="state-panel state-loading is-hidden" id="state-loading">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Setting up your game...</span>
+        </div>
+
+        <!-- Error State Banner (Hidden Initially) -->
+        <div class="state-panel state-error is-hidden" id="state-error">
+            <span class="error-icon" aria-hidden="true">&excl;</span>
+            <span class="error-text" id="error-text">An error occurred. Please try again.</span>
+        </div>
+    </div>
+
+    <!-- Main Game Board (5x5 Guess Grid) -->
+    <main class="game-stage" id="game-stage" aria-label="Game board stage">
+        <div class="game-board" id="game-board" role="grid" aria-label="5 by 5 guess board">
+            {% for row in range(5) %}
+            <div class="board-row" role="row" data-row="{{ row }}" aria-label="Row {{ row + 1 }}">
+                {% for col in range(5) %}
+                <div class="board-tile" role="gridcell" data-row="{{ row }}" data-col="{{ col }}" aria-label="Row {{ row + 1 }}, Letter {{ col + 1 }}"></div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Interaction Stage Placeholder (Future Keyboard & Controls) -->
+    <section class="game-controls" id="game-controls" aria-label="Game interaction controls">
+        <div class="controls-placeholder" id="controls-placeholder">
+            <span class="controls-hint">Virtual keyboard &amp; inputs will render here</span>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='js/game.js') }}" defer></script>
+{% endblock %}
