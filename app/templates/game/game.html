@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="game-page-container" data-game-id="{{ game_id or '' }}">
+<div class="game-page-container" data-game-id="{{ game_id or '' }}" data-daily-limit-reached="{% if games_today >= max_daily_games %}true{% else %}false{% endif %}">
     <!-- Compact Game Header -->
     <header class="game-header">
         <div class="header-content">
@@ -20,7 +20,7 @@
     <section class="game-meta" aria-label="Game session information">
         <div class="meta-item">
             <span class="meta-label">Attempt</span>
-            <span class="meta-value tabular" id="attempts-display">0 / 5</span>
+            <span class="meta-value tabular" id="attempts-display" aria-live="polite" aria-atomic="true">0 / 5</span>
         </div>
         <div class="meta-item">
             <span class="meta-label">Daily Limit</span>
@@ -37,19 +37,38 @@
         <!-- Ready State Banner -->
         <div class="state-panel state-ready" id="state-ready">
             <p class="state-message">Guess the secret 5-letter English word within 5 attempts.</p>
-            <button type="button" class="btn btn-primary btn-game-action" id="action-start-game">
-                <span id="btn-start-game" class="btn-text">Start Game</span>
+            <button type="button" class="btn btn-primary btn-game-action" id="action-start-game" {% if games_today >= max_daily_games %}disabled{% endif %}>
+                <span id="btn-start-game" class="btn-text">{% if games_today >= max_daily_games %}Daily Limit Reached{% else %}Start Game{% endif %}</span>
             </button>
         </div>
 
         <!-- Completed State Banner (Hidden Initially) -->
-        <div class="state-panel state-completed is-hidden" id="state-completed">
-            <div class="completion-icon" aria-hidden="true">&#9733;</div>
-            <h3 class="completion-title" id="completion-title">Game Finished</h3>
-            <p class="completion-message" id="completion-message"></p>
-            <p class="completion-target-wrapper is-hidden" id="completion-target-wrapper">
-                The secret word was <strong class="completion-target" id="completion-target"></strong>
-            </p>
+        <div class="state-panel state-completed is-hidden" id="state-completed" role="region" aria-label="Game Completion Summary" tabindex="-1">
+            <div class="completion-header">
+                <div class="completion-icon" id="completion-icon" aria-hidden="true">&#10003;</div>
+                <h3 class="completion-title" id="completion-title">Game Finished</h3>
+                <p class="completion-message" id="completion-message"></p>
+            </div>
+
+            <div class="completion-meta-row" id="completion-meta-row">
+                <span class="meta-item-label">Attempts Used</span>
+                <span class="completion-attempts tabular" id="completion-attempts">0 / 5</span>
+            </div>
+
+            <div class="completion-target-card is-hidden" id="completion-target-wrapper">
+                <span class="target-card-label" id="completion-target-label">Secret Word</span>
+                <strong class="completion-target" id="completion-target"></strong>
+            </div>
+
+            <div class="completion-actions" id="completion-actions">
+                <button type="button" class="btn btn-primary btn-game-action btn-play-again" id="action-play-again">
+                    <span id="btn-play-again" class="btn-text">Play Again</span>
+                </button>
+            </div>
+
+            <div class="completion-feedback is-hidden" id="completion-feedback" role="alert" aria-live="polite">
+                <span class="completion-feedback-text" id="completion-feedback-text"></span>
+            </div>
         </div>
 
         <!-- Daily Limit Reached Banner (Conditional / Dynamic) -->
@@ -83,6 +102,11 @@
             {% endfor %}
         </div>
     </main>
+
+    <!-- Inline Guess Feedback Container (Subtle Length/Error/Loading Feedback) -->
+    <div class="guess-feedback is-hidden" id="guess-feedback" role="status" aria-live="polite">
+        <span class="feedback-text" id="feedback-text"></span>
+    </div>
 
     <!-- Interaction Stage Placeholder (Future Keyboard & Controls) -->
     <section class="game-controls" id="game-controls" aria-label="Game interaction controls">

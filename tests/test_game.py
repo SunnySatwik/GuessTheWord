@@ -974,19 +974,24 @@ def test_game_js_input_gating_guards(client: TestClient):
 
 
 def test_game_js_no_guess_submission_api_call_on_typing(client: TestClient):
-    """Verify typing or pressing Enter does NOT trigger /guess API submission."""
+    """Verify typing letters or pressing backspace does NOT trigger /guess API submission."""
     response = client.get("/static/js/game.js")
     assert response.status_code == status.HTTP_200_OK
     js = response.text
 
-    # Locate handleSubmitRequest definition
-    submit_idx = js.find("handleSubmitRequest() {")
-    assert submit_idx != -1
-    submit_block = js[submit_idx:submit_idx + 400]
+    # Locate handleLetterInput definition
+    letter_idx = js.find("handleLetterInput(letter) {")
+    assert letter_idx != -1
+    letter_block = js[letter_idx:letter_idx + 400]
+    assert "fetch" not in letter_block
+    assert "/guess" not in letter_block
 
-    assert "fetch" not in submit_block
-    assert "/guess" not in submit_block
-    assert "Submission not implemented yet" in submit_block
+    # Locate handleBackspace definition
+    bs_idx = js.find("handleBackspace() {")
+    assert bs_idx != -1
+    bs_block = js[bs_idx:bs_idx + 400]
+    assert "fetch" not in bs_block
+    assert "/guess" not in bs_block
 
 
 def test_game_persisted_guesses_remain_immutable_with_active_row(client: TestClient, db_session: Session):
@@ -1018,6 +1023,805 @@ def test_game_persisted_guesses_remain_immutable_with_active_row(client: TestCli
     assert data["guesses"][1]["guess"] == "WATER"
     # Row 2 (0-indexed) must be the next active row for new typing
     assert data["status"] == GameStatus.IN_PROGRESS
+
+
+# ============================================================================
+# 13. Guess Submission Integration (Phase 4B-3C)
+# ============================================================================
+
+
+def test_enter_with_fewer_than_five_letters_makes_no_api_request(client: TestClient):
+    """Verify Enter with < 5 letters does NOT dispatch an API request and displays subtle inline feedback."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    submit_idx = js.find("handleSubmitRequest() {")
+    assert submit_idx != -1
+    submit_block = js[submit_idx:submit_idx + 450]
+
+    assert "this.currentInput.length < 5" in submit_block
+    assert "5 letters required" in submit_block
+    assert "submitted: false" in submit_block
+
+
+def test_enter_with_five_letters_calls_correct_post_endpoint(client: TestClient):
+    """Verify Enter with 5 letters dispatches POST /game/{game_id}/guess with proper headers."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    submit_guess_idx = js.find("async submitGuess() {")
+    assert submit_guess_idx != -1
+    submit_guess_block = js[submit_guess_idx:submit_guess_idx + 800]
+
+    assert "POST" in submit_guess_block
+    assert "/game/" in submit_guess_block
+    assert "/guess" in submit_guess_block
+    assert "application/json" in submit_guess_block
+    assert "same-origin" in submit_guess_block
+    assert "JSON.stringify({ guess: guess })" in submit_guess_block
+
+
+def test_submitted_guess_is_normalized_to_uppercase(client: TestClient, db_session: Session):
+    """Verify guess submission normalizes input to uppercase both in JS and at backend API."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    submit_guess_idx = js.find("async submitGuess() {")
+    assert submit_guess_idx != -1
+    submit_guess_block = js[submit_guess_idx:submit_guess_idx + 400]
+    assert "this.currentInput.toUpperCase()" in submit_guess_block
+
+    # Test backend accepts lowercase and normalizes to uppercase
+    seed_words(db_session)
+    user = register_user(db_session, username="uppercasetester", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    game = start_game(db_session, user.id)
+    res = client.post(f"/game/{game.id}/guess", json={"guess": "crane"})
+    assert res.status_code == status.HTTP_200_OK
+    data = res.json()
+    assert data["guesses"][0]["guess"] == "CRANE"
+
+
+def test_backend_correct_evaluation_rendered_directly(client: TestClient):
+    """Verify CORRECT backend evaluation directly maps to 'correct' tile state in game.js."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    apply_idx = js.find("applyGuessResult(gameState) {")
+    assert apply_idx != -1
+    apply_block = js[apply_idx:apply_idx + 2500]
+
+    assert 'evalItem.result === "CORRECT"' in apply_block
+    assert 'state = "correct"' in apply_block
+
+
+def test_backend_present_evaluation_rendered_directly(client: TestClient):
+    """Verify PRESENT backend evaluation directly maps to 'present' tile state in game.js."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    apply_idx = js.find("applyGuessResult(gameState) {")
+    assert apply_idx != -1
+    apply_block = js[apply_idx:apply_idx + 2500]
+
+    assert 'evalItem.result === "PRESENT"' in apply_block
+    assert 'state = "present"' in apply_block
+
+
+def test_backend_absent_evaluation_rendered_directly(client: TestClient):
+    """Verify ABSENT backend evaluation directly maps to 'absent' tile state in game.js."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    apply_idx = js.find("applyGuessResult(gameState) {")
+    assert apply_idx != -1
+    apply_block = js[apply_idx:apply_idx + 2500]
+
+    assert 'evalItem.result === "ABSENT"' in apply_block
+    assert 'state = "absent"' in apply_block
+
+
+def test_successful_in_progress_submission_advances_active_row(client: TestClient, db_session: Session):
+    """Verify successful guess advances attempts counter and sets next row active."""
+    seed_words(db_session)
+    user = register_user(db_session, username="advancerowtester", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    word = db_session.query(Word).filter_by(word="LIGHT").first()
+    assert word is not None
+
+    game = Game(user_id=user.id, word_id=word.id, status=GameStatus.IN_PROGRESS, attempts=0)
+    db_session.add(game)
+    db_session.commit()
+
+    # Submit first non-winning guess
+    res = client.post(f"/game/{game.id}/guess", json={"guess": "CRANE"})
+    assert res.status_code == status.HTTP_200_OK
+    data = res.json()
+    assert data["status"] == "IN_PROGRESS"
+    assert data["attempts"] == 1
+
+    # Verify game.js advances active row to attempts
+    js_res = client.get("/static/js/game.js")
+    assert "this.setActiveRow(attempts);" in js_res.text
+
+
+def test_successful_submission_clears_current_input_preserves_rows(client: TestClient):
+    """Verify successful guess clears currentInput without resetting previous rows."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    apply_idx = js.find("applyGuessResult(gameState) {")
+    assert apply_idx != -1
+    apply_block = js[apply_idx:apply_idx + 2500]
+
+    assert 'this.currentInput = "";' in apply_block
+    # Must NOT call resetBoard in applyGuessResult
+    assert "this.resetBoard()" not in apply_block
+
+
+def test_won_response_activates_no_new_row(client: TestClient, db_session: Session):
+    """Verify winning guess deactivates active row, reveals target word, and marks status WON."""
+    user = register_user(db_session, username="wontester4b", password="Password1$")
+    word = Word(word="FLAME")
+    db_session.add(word)
+    db_session.commit()
+
+    game = Game(user_id=user.id, word_id=word.id, status=GameStatus.IN_PROGRESS, attempts=0)
+    db_session.add(game)
+    db_session.commit()
+
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    res = client.post(f"/game/{game.id}/guess", json={"guess": "FLAME"})
+    assert res.status_code == status.HTTP_200_OK
+    data = res.json()
+
+    assert data["status"] == "WON"
+    assert data["is_active"] is False
+    assert data["target_word"] == "FLAME"
+
+    # Verify game.js deactivates active row on WON
+    js_res = client.get("/static/js/game.js")
+    assert 'status === "WON"' in js_res.text
+    assert "this.setActiveRow(-1);" in js_res.text
+
+
+def test_lost_response_activates_no_new_row(client: TestClient, db_session: Session):
+    """Verify fifth incorrect guess marks status LOST, deactivates active row, and reveals target."""
+    user = register_user(db_session, username="losttester4b", password="Password1$")
+    word = Word(word="WATER")
+    db_session.add(word)
+    db_session.commit()
+
+    game = Game(user_id=user.id, word_id=word.id, status=GameStatus.IN_PROGRESS, attempts=0)
+    db_session.add(game)
+    db_session.commit()
+
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    for _ in range(4):
+        res = client.post(f"/game/{game.id}/guess", json={"guess": "CLOUD"})
+        assert res.status_code == status.HTTP_200_OK
+
+    # 5th attempt
+    res5 = client.post(f"/game/{game.id}/guess", json={"guess": "CLOUD"})
+    assert res5.status_code == status.HTTP_200_OK
+    data5 = res5.json()
+
+    assert data5["status"] == "LOST"
+    assert data5["attempts"] == 5
+    assert data5["is_active"] is False
+    assert data5["target_word"] == "WATER"
+
+    # Verify game.js deactivates active row on LOST
+    js_res = client.get("/static/js/game.js")
+    assert 'status === "LOST"' in js_res.text
+
+
+def test_duplicate_submission_protection_in_game_js(client: TestClient):
+    """Verify game.js prevents duplicate submissions while a request is in flight."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "isSubmittingGuess: false" in js
+    assert "!this.isSubmittingGuess" in js
+
+    submit_idx = js.find("async submitGuess() {")
+    assert submit_idx != -1
+    submit_block = js[submit_idx:submit_idx + 400]
+    assert "this.isSubmittingGuess" in submit_block
+    assert "this.setSubmissionLoading(true)" in submit_block
+
+
+def test_http_400_does_not_advance_row_or_clear_guess(client: TestClient, db_session: Session):
+    """Verify HTTP 400 Bad Request displays error, preserves staged guess, and does not advance row."""
+    seed_words(db_session)
+    user = register_user(db_session, username="http400tester", password="Password1$")
+    game = start_game(db_session, user.id)
+
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    # Submit invalid guess
+    res = client.post(f"/game/{game.id}/guess", json={"guess": "12345"})
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
+    data = res.json()
+    assert "detail" in data
+
+    # Verify game attempts unchanged
+    state_res = client.get(f"/game/{game.id}")
+    assert state_res.json()["attempts"] == 0
+
+    # Verify game.js handles 400 without clearing input or resetting board
+    js_res = client.get("/static/js/game.js")
+    assert "response.status === 400" in js_res.text
+
+
+def test_http_401_unauthenticated_guess_handling(client: TestClient):
+    """Verify HTTP 401 Unauthorized returns authentication required and is handled in JS."""
+    client.cookies.clear()
+    res = client.post("/game/10/guess", json={"guess": "CRANE"}, headers={"Accept": "application/json"})
+    assert res.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "detail" in res.json()
+
+    js_res = client.get("/static/js/game.js")
+    assert "response.status === 401" in js_res.text
+    assert "Login Required" in js_res.text
+
+
+def test_http_403_unauthorized_guess_handling(client: TestClient, db_session: Session):
+    """Verify HTTP 403 Forbidden is returned when player submits guess to another player's game."""
+    seed_words(db_session)
+    player1 = register_user(db_session, username="p1owner", password="Password1$")
+    player2 = register_user(db_session, username="p2intruder", password="Password1$")
+
+    game = start_game(db_session, player1.id)
+
+    # Login as player2
+    token2 = create_session_token(player2.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token2)
+
+    res = client.post(f"/game/{game.id}/guess", json={"guess": "CRANE"})
+    assert res.status_code == status.HTTP_403_FORBIDDEN
+    assert "detail" in res.json()
+
+    js_res = client.get("/static/js/game.js")
+    assert "response.status === 403" in js_res.text
+
+
+def test_http_404_game_not_found_handling(client: TestClient, db_session: Session):
+    """Verify HTTP 404 Not Found is returned for non-existent game ID and handled in JS."""
+    user = register_user(db_session, username="notfoundtester", password="Password1$")
+    token = create_session_token(user.id)
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+
+    res = client.post("/game/999999/guess", json={"guess": "CRANE"})
+    assert res.status_code == status.HTTP_404_NOT_FOUND
+
+    js_res = client.get("/static/js/game.js")
+    assert "response.status === 404" in js_res.text
+
+
+def test_network_failure_handled_with_friendly_message(client: TestClient):
+    """Verify network or unexpected exceptions during guess submission display a friendly message."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    assert "handleGuessError(error) {" in js
+    assert "Connection error. Please check your network and try again." in js
+
+
+def test_game_js_contains_zero_client_side_wordle_evaluation(client: TestClient):
+    """Verify game.js contains strictly zero client-side Wordle evaluation logic."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    # Verify no local evaluation algorithm keywords exist
+    assert "evaluateGuess" not in js
+    assert "evaluate_guess" not in js
+    assert "target_counts" not in js
+    assert "letterCounts" not in js
+    assert "letter_counts" not in js
+    assert "targetWord" not in js
+    assert "secretWord" not in js
+
+
+def test_no_virtual_keyboard_introduced(client: TestClient):
+    """Verify no virtual or on-screen keyboard buttons are introduced."""
+    js_res = client.get("/static/js/game.js")
+    assert "renderKeyboard" not in js_res.text
+    assert "virtual-key" not in js_res.text
+    assert "keyboard-row" not in js_res.text
+
+
+# ============================================================================
+# 14. Polished Guess Reveal Animation (Phase 4B-4A)
+# ============================================================================
+
+
+def test_reveal_animation_sequential_stagger(client: TestClient):
+    """Verify animateGuessReveal schedules sequential tile reveals from left to right."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_idx = js.find("animateGuessReveal(gameState) {")
+    assert reveal_idx != -1
+    reveal_block = js[reveal_idx:reveal_idx + 4000]
+
+    assert "tileStaggerMs = 250" in reveal_block
+    assert "tileDurationMs = 500" in reveal_block
+    assert "c * tileStaggerMs" in reveal_block
+    assert "this.revealTile(submittedRow, c, state, c * tileStaggerMs)" in reveal_block
+
+
+def test_reveal_animation_midway_state_transition(client: TestClient):
+    """Verify revealTile switches tile evaluation state midway at 250ms during 500ms flip."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_tile_idx = js.find("revealTile(row, col, state, delayMs = 0) {")
+    assert reveal_tile_idx != -1
+    tile_block = js[reveal_tile_idx:reveal_tile_idx + 1000]
+
+    assert "is-revealing" in tile_block
+    assert "250" in tile_block
+    assert "500" in tile_block
+    assert "tile.classList.add(`is-${state}`)" in tile_block
+
+
+def test_can_accept_input_blocked_during_reveal(client: TestClient):
+    """Verify canAcceptInput rejects all input while isRevealing is true."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    can_accept_idx = js.find("canAcceptInput() {")
+    assert can_accept_idx != -1
+    can_accept_block = js[can_accept_idx:can_accept_idx + 600]
+
+    assert "!this.isRevealing" in can_accept_block
+    assert "isRevealing: false" in js
+
+
+def test_reveal_animation_defers_row_advancement(client: TestClient):
+    """Verify row advancement is deferred until the finalize callback after all tiles finish."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_idx = js.find("animateGuessReveal(gameState) {")
+    assert reveal_idx != -1
+    reveal_block = js[reveal_idx:reveal_idx + 4000]
+
+    # setActiveRow is inside the finalize callback with totalDurationMs
+    assert "this.setActiveRow(attempts)" in reveal_block
+    assert "totalDurationMs" in reveal_block
+    assert "this.isRevealing = false" in reveal_block
+
+
+def test_reveal_animation_defers_won_completion_banner(client: TestClient):
+    """Verify WON completion banner is deferred until after the final tile reveal finishes."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_idx = js.find("animateGuessReveal(gameState) {")
+    assert reveal_idx != -1
+    reveal_block = js[reveal_idx:reveal_idx + 4000]
+
+    assert 'status === "WON"' in reveal_block
+    assert "this.showCompletedState(gameState, true)" in reveal_block
+    assert "totalDurationMs" in reveal_block
+
+
+def test_reveal_animation_defers_lost_completion_banner(client: TestClient):
+    """Verify LOST completion banner is deferred until after the fifth tile reveal finishes."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_idx = js.find("animateGuessReveal(gameState) {")
+    assert reveal_idx != -1
+    reveal_block = js[reveal_idx:reveal_idx + 4000]
+
+    assert 'status === "LOST"' in reveal_block
+    assert "this.showCompletedState(gameState, false)" in reveal_block
+
+
+def test_persisted_guesses_load_without_reveal_animation(client: TestClient):
+    """Verify persisted guesses rendered from GET /game/{id} do not use flip animations."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    render_guess_idx = js.find("renderGuess(guess) {")
+    assert render_guess_idx != -1
+    render_guess_block = js[render_guess_idx:render_guess_idx + 1200]
+
+    assert "revealTile" not in render_guess_block
+    assert "setTimeout" not in render_guess_block
+    assert "this.setTileState(row, c, state)" in render_guess_block
+
+
+def test_reveal_animation_respects_prefers_reduced_motion(client: TestClient):
+    """Verify animateGuessReveal detects prefers-reduced-motion and falls back to immediate evaluation."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_idx = js.find("animateGuessReveal(gameState) {")
+    assert reveal_idx != -1
+    reveal_block = js[reveal_idx:reveal_idx + 1200]
+
+    assert "prefers-reduced-motion: reduce" in reveal_block
+    assert "this.applyGuessResult(gameState)" in reveal_block
+
+
+def test_reveal_animation_contains_zero_client_side_wordle_logic(client: TestClient):
+    """Verify animateGuessReveal maps backend results directly without computing Wordle matches."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reveal_idx = js.find("animateGuessReveal(gameState) {")
+    assert reveal_idx != -1
+    reveal_block = js[reveal_idx:reveal_idx + 4000]
+
+    assert 'evalItem.result === "CORRECT"' in reveal_block
+    assert 'evalItem.result === "PRESENT"' in reveal_block
+    assert 'evalItem.result === "ABSENT"' in reveal_block
+    assert "target_word" not in reveal_block
+
+
+def test_reveal_timeouts_cleaned_up_on_board_reset(client: TestClient):
+    """Verify resetBoard clears all pending reveal timeouts and resets isRevealing."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    reset_idx = js.find("resetBoard() {")
+    assert reset_idx != -1
+    reset_block = js[reset_idx:reset_idx + 500]
+
+    assert "this.clearRevealTimeouts()" in reset_block
+    assert "this.isRevealing = false" in reset_block
+
+
+# ============================================================================
+# 15. Polished Game Completion UX (Phase 4B-4B)
+# ============================================================================
+
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def test_completion_ui_dom_structure(client: TestClient):
+    """Verify state-completed template contains attempts metric, target word card, play again action, and feedback."""
+    response = client.get("/game")
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER)
+
+    # Read template directly to verify DOM structure
+    template_path = BASE_DIR / "app" / "templates" / "game" / "game.html"
+    html = template_path.read_text(encoding="utf-8")
+
+    assert 'id="state-completed"' in html
+    assert 'id="completion-title"' in html
+    assert 'id="completion-message"' in html
+    assert 'id="completion-icon"' in html
+    assert 'id="completion-attempts"' in html
+    assert 'id="completion-target-wrapper"' in html
+    assert 'id="completion-target"' in html
+    assert 'id="action-play-again"' in html
+    assert 'id="btn-play-again"' in html
+    assert 'id="completion-feedback"' in html
+    assert 'id="completion-feedback-text"' in html
+
+
+def test_completion_css_won_and_lost_classes(client: TestClient):
+    """Verify game.css provides distinct visual treatments for won (emerald) and lost (muted rose/slate)."""
+    response = client.get("/static/css/game.css")
+    assert response.status_code == status.HTTP_200_OK
+    css = response.text
+
+    assert ".state-completed.is-won" in css
+    assert ".state-completed.is-lost" in css
+    assert ".completion-icon" in css
+    assert ".completion-target-card" in css
+    assert ".completion-attempts" in css
+    assert ".btn-play-again" in css
+    assert ".completion-feedback" in css
+    assert ".completion-feedback.is-limit" in css
+    assert ".completion-feedback.is-error" in css
+
+
+def test_completion_js_caches_new_elements(client: TestClient):
+    """Verify cacheElements in game.js caches completion elements."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    cache_idx = js.find("cacheElements() {")
+    assert cache_idx != -1
+    cache_block = js[cache_idx:cache_idx + 4000]
+
+    assert "completionIcon:" in cache_block
+    assert "completionAttempts:" in cache_block
+    assert "btnPlayAgain:" in cache_block
+    assert "completionFeedback:" in cache_block
+    assert "completionFeedbackText:" in cache_block
+
+
+def test_play_again_click_triggers_start_game(client: TestClient):
+    """Verify clicking action-play-again dispatches startGame with play-again source."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    bind_idx = js.find("bindEvents() {")
+    assert bind_idx != -1
+    bind_block = js[bind_idx:bind_idx + 1000]
+
+    assert "btnPlayAgain" in bind_block
+    assert 'this.startGame("play-again")' in bind_block
+
+
+def test_play_again_duplicate_click_prevention(client: TestClient):
+    """Verify startGame enforces isStartingGame guard to prevent duplicate clicks."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    start_idx = js.find('startGame(triggerSource = "start") {')
+    assert start_idx != -1
+    start_block = js[start_idx:start_idx + 600]
+
+    assert "if (this.isStartingGame) return;" in start_block
+    assert "this.setStartButtonLoading(true, triggerSource)" in start_block
+
+
+def test_play_again_201_navigation(client: TestClient):
+    """Verify handleStartGameResponse navigates to /game?game_id=... upon 201 Created."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    handle_idx = js.find('handleStartGameResponse(response, triggerSource = "start") {')
+    assert handle_idx != -1
+    handle_block = js[handle_idx:handle_idx + 5000]
+
+    assert "response.status === 201" in handle_block
+    assert "window.location.assign" in handle_block
+    assert "/game?game_id=" in handle_block
+
+
+def test_play_again_429_limit_handling_preserves_board(client: TestClient):
+    """Verify 429 response uses backend detail message, disables button, and keeps completed board intact."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    handle_idx = js.find('handleStartGameResponse(response, triggerSource = "start") {')
+    assert handle_idx != -1
+    end_idx = js.find('handleStartGameError(', handle_idx)
+    assert end_idx != -1
+    handle_block = js[handle_idx:end_idx]
+
+    assert "response.status === 429" in handle_block
+    assert "data.detail" in handle_block
+    assert 'triggerSource === "play-again"' in handle_block
+    assert 'this.showCompletionFeedback(limitMsg, "limit")' in handle_block
+    assert "playAgainBtn.disabled = true" in handle_block
+    assert "Daily Limit Reached" in handle_block
+    # Verify it does not reset the board
+    assert "resetBoard" not in handle_block
+
+
+def test_play_again_preserves_completed_game_on_error(client: TestClient):
+    """Verify 401, server error, or network failure keep completed game intact and show friendly feedback."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    handle_idx = js.find('handleStartGameResponse(response, triggerSource = "start") {')
+    assert handle_idx != -1
+    handle_block = js[handle_idx:handle_idx + 5000]
+
+    assert "response.status === 401" in handle_block
+    assert 'this.showCompletionFeedback("Your session has expired' in handle_block
+    assert 'this.showCompletionFeedback(errorMsg, "error")' in handle_block
+
+    err_idx = js.find('handleStartGameError(error, triggerSource = "start") {')
+    assert err_idx != -1
+    err_block = js[err_idx:err_idx + 800]
+    assert 'this.showCompletionFeedback(msg, "error")' in err_block
+
+
+def test_show_completed_state_populates_attempts_and_target(client: TestClient):
+    """Verify showCompletedState populates attempts, target word, toggle classes, and focuses play again."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    show_idx = js.find("showCompletedState(gameState, isWin) {")
+    assert show_idx != -1
+    show_block = js[show_idx:show_idx + 4500]
+
+    assert "panel.classList.add(isWin ? \"is-won\" : \"is-lost\")" in show_block
+    assert "this.elements.completionIcon.innerHTML = isWin ?" in show_block
+    assert "this.elements.completionAttempts.textContent =" in show_block
+    assert "this.elements.completionTarget.textContent = gameState.target_word" in show_block
+    assert "playAgainBtn.focus(" in show_block
+
+
+def test_completion_panel_accessible_attributes(client: TestClient):
+    """Verify accessibility attributes on state-completed and completion-feedback."""
+    template_path = BASE_DIR / "app" / "templates" / "game" / "game.html"
+    html = template_path.read_text(encoding="utf-8")
+
+    assert 'role="region"' in html
+    assert 'aria-label="Game Completion Summary"' in html
+    assert 'role="alert"' in html
+    assert 'aria-live="polite"' in html
+
+
+# ============================================================================
+# 16. Phase 4B-4C UX Polish & Edge-Case Verification Tests
+# ============================================================================
+
+
+def test_active_row_filled_tile_border_specificity(client: TestClient):
+    """Verify CSS contains .board-row.is-active .board-tile.is-filled to ensure crisp contrast."""
+    response = client.get("/static/css/game.css")
+    assert response.status_code == status.HTTP_200_OK
+    css = response.text
+
+    assert ".board-row.is-active .board-tile.is-filled" in css
+    assert "border-color: var(--color-tile-border-filled);" in css
+
+
+def test_guess_feedback_reserved_footprint_css(client: TestClient):
+    """Verify .guess-feedback has reserved footprint to prevent layout shifts."""
+    response = client.get("/static/css/game.css")
+    assert response.status_code == status.HTTP_200_OK
+    css = response.text
+
+    assert ".guess-feedback" in css
+    assert "min-height: 2.25rem;" in css
+    assert ".guess-feedback.is-hidden" in css
+    assert "visibility: hidden;" in css
+    assert "border-color: transparent !important;" in css
+
+
+def test_btn_active_tactile_and_touch_target_css(client: TestClient):
+    """Verify primary game buttons have 44px min-height and tactile active styling."""
+    response = client.get("/static/css/game.css")
+    assert response.status_code == status.HTTP_200_OK
+    css = response.text
+
+    assert "min-height: 44px;" in css
+    assert ".btn-game-action:active:not(:disabled)" in css
+
+
+def test_game_html_daily_limit_and_accessibility_attributes(client: TestClient):
+    """Verify game.html renders data-daily-limit-reached, tabindex="-1", and live region on attempts."""
+    template_path = BASE_DIR / "app" / "templates" / "game" / "game.html"
+    html = template_path.read_text(encoding="utf-8")
+
+    assert 'data-daily-limit-reached="' in html
+    assert 'tabindex="-1"' in html
+    assert 'id="attempts-display"' in html
+    assert 'aria-atomic="true"' in html
+
+
+def test_game_js_check_initial_game_respects_daily_limit(client: TestClient):
+    """Verify checkInitialGame checks daily limit dataset and shows limit state if already reached."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    check_idx = js.find("checkInitialGame() {")
+    assert check_idx != -1
+    check_block = js[check_idx:check_idx + 3000]
+
+    assert "isDailyLimitReached" in check_block
+    assert 'this.showState("limit", { keepReady: true })' in check_block
+    assert 'this.updateStatusBadge("ready", "Limit Reached")' in check_block
+    assert "Daily Limit Reached" in check_block
+
+
+def test_game_js_start_game_clears_stale_error(client: TestClient):
+    """Verify startGame dismisses any existing stateError banner."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    start_idx = js.find('startGame(triggerSource = "start") {')
+    assert start_idx != -1
+    start_block = js[start_idx:start_idx + 800]
+
+    assert "this.elements.stateError.classList.add(\"is-hidden\")" in start_block
+
+
+def test_game_js_load_game_resets_board(client: TestClient):
+    """Verify loadGameState calls resetBoard before setting stateLoading."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    load_idx = js.find("async loadGameState(gameId) {")
+    assert load_idx != -1
+    load_block = js[load_idx:load_idx + 600]
+
+    assert "this.resetBoard();" in load_block
+    assert 'this.showState("loading");' in load_block
+
+
+def test_game_js_ime_composition_and_repeat_guards(client: TestClient):
+    """Verify handleKeyDown includes event.isComposing and Enter repeat guards."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    key_idx = js.find("handleKeyDown(event) {")
+    assert key_idx != -1
+    key_block = js[key_idx:key_idx + 2500]
+
+    assert "event.isComposing" in key_block
+    assert "if (event.repeat) return;" in key_block
+
+
+def test_game_js_backspace_clears_feedback_always(client: TestClient):
+    """Verify handleBackspace calls clearInputFeedback regardless of current input length."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    bs_idx = js.find("handleBackspace() {")
+    assert bs_idx != -1
+    bs_block = js[bs_idx:bs_idx + 600]
+
+    feedback_pos = bs_block.find("this.clearInputFeedback();")
+    len_check_pos = bs_block.find("if (this.currentInput.length === 0) return;")
+    assert feedback_pos != -1
+    assert len_check_pos != -1
+    assert feedback_pos < len_check_pos
+
+
+def test_game_js_completion_focus_fallback(client: TestClient):
+    """Verify showCompletedState falls back to focusing stateCompleted if playAgainBtn is disabled."""
+    response = client.get("/static/js/game.js")
+    assert response.status_code == status.HTTP_200_OK
+    js = response.text
+
+    show_idx = js.find("showCompletedState(gameState, isWin) {")
+    assert show_idx != -1
+    show_block = js[show_idx:show_idx + 4500]
+
+    assert "this.clearInputFeedback();" in show_block
+    assert "!playAgainBtn.disabled" in show_block
+    assert "this.elements.stateCompleted.focus(" in show_block
+
+
+
+
 
 
 

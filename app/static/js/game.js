@@ -17,6 +17,9 @@
         gameState: null,
         isKeyHandlerBound: false,
         isStartingGame: false,
+        isSubmittingGuess: false,
+        isRevealing: false,
+        revealTimeouts: [],
 
         init() {
             this.cacheElements();
@@ -52,6 +55,13 @@
                 boardTiles: document.querySelectorAll(".board-tile"),
                 gameControls: document.getElementById("game-controls"),
                 controlsPlaceholder: document.getElementById("controls-placeholder"),
+                guessFeedback: document.getElementById("guess-feedback"),
+                feedbackText: document.getElementById("feedback-text"),
+                completionIcon: document.getElementById("completion-icon"),
+                completionAttempts: document.getElementById("completion-attempts"),
+                btnPlayAgain: document.getElementById("action-play-again") || document.getElementById("btn-play-again"),
+                completionFeedback: document.getElementById("completion-feedback"),
+                completionFeedbackText: document.getElementById("completion-feedback-text"),
             };
         },
 
@@ -135,25 +145,48 @@
             const tile = this.getTile(row, col);
             if (!tile) return;
 
-            setTimeout(() => {
+            const t1 = setTimeout(() => {
                 tile.classList.add("is-revealing");
-                setTimeout(() => {
+                const t2 = setTimeout(() => {
                     tile.classList.remove("is-filled");
                     tile.classList.add(`is-${state}`);
                     tile.setAttribute("data-state", state);
-                }, 225);
+                }, 250);
 
-                setTimeout(() => {
+                const t3 = setTimeout(() => {
                     tile.classList.remove("is-revealing");
-                }, 450);
+                }, 500);
+
+                this.revealTimeouts.push(t2, t3);
             }, delayMs);
+
+            this.revealTimeouts.push(t1);
+        },
+
+        /**
+         * Clear any pending reveal timeouts
+         */
+        clearRevealTimeouts() {
+            if (this.revealTimeouts && this.revealTimeouts.length > 0) {
+                this.revealTimeouts.forEach(t => clearTimeout(t));
+                this.revealTimeouts = [];
+            }
         },
 
         bindEvents() {
             if (this.elements.btnStartGame) {
                 this.elements.btnStartGame.addEventListener("click", (e) => {
                     e.preventDefault();
-                    this.startGame();
+                    this.startGame("start");
+                });
+            }
+            if (this.elements.btnPlayAgain) {
+                const resolvedPlayAgainBtn = this.elements.btnPlayAgain.tagName === "SPAN" 
+                    ? (this.elements.btnPlayAgain.closest("button") || this.elements.btnPlayAgain) 
+                    : this.elements.btnPlayAgain;
+                resolvedPlayAgainBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.startGame("play-again");
                 });
             }
         },
@@ -179,7 +212,9 @@
                 this.activeRowIndex >= 0 &&
                 this.activeRowIndex < 5 &&
                 (typeof this.gameState.attempts !== "number" || this.gameState.attempts < (this.gameState.max_attempts || 5)) &&
-                !this.isStartingGame
+                !this.isStartingGame &&
+                !this.isSubmittingGuess &&
+                !this.isRevealing
             );
         },
 
@@ -202,6 +237,11 @@
                 return;
             }
 
+            // Guard against international IME composition keystrokes
+            if (event.isComposing || event.keyCode === 229) {
+                return;
+            }
+
             // Only proceed if game is active and accepting input
             if (!this.canAcceptInput()) {
                 return;
@@ -217,6 +257,7 @@
             }
 
             if (key === "Enter" || code === "Enter") {
+                if (event.repeat) return;
                 event.preventDefault();
                 this.handleSubmitRequest();
                 return;
@@ -245,6 +286,7 @@
             if (!this.canAcceptInput()) return;
             if (this.currentInput.length >= 5) return;
 
+            this.clearInputFeedback();
             const normalized = letter.toUpperCase();
             const col = this.currentInput.length;
             this.currentInput += normalized;
@@ -256,6 +298,7 @@
          */
         handleBackspace() {
             if (!this.canAcceptInput()) return;
+            this.clearInputFeedback();
             if (this.currentInput.length === 0) return;
 
             const colToRemove = this.currentInput.length - 1;
@@ -264,19 +307,336 @@
         },
 
         /**
-         * Recognize Enter key action without submission (Phase 4B-3B hook)
+         * Process Enter key action for guess submission (Phase 4B-3C)
          * @returns {object|null}
          */
         handleSubmitRequest() {
             if (!this.canAcceptInput()) return null;
+
             if (this.currentInput.length < 5) {
+                this.showInputFeedback("5 letters required", "error");
                 return { submitted: false, reason: "Word must be 5 letters." };
             }
+
+            this.clearInputFeedback();
+            this.submitGuess();
             return {
-                submitted: false,
-                guess: this.currentInput,
-                reason: "Submission not implemented yet."
+                submitted: true,
+                guess: this.currentInput
             };
+        },
+
+        /**
+         * Submit the current 5-letter guess to POST /game/{game_id}/guess
+         */
+        async submitGuess() {
+            if (this.isSubmittingGuess || this.currentInput.length !== 5 || !this.canAcceptInput()) {
+                return;
+            }
+
+            const guess = this.currentInput.toUpperCase();
+            const gameId = this.gameState && this.gameState.game_id;
+            if (!gameId) return;
+
+            this.setSubmissionLoading(true);
+
+            try {
+                const response = await fetch(`/game/${encodeURIComponent(gameId)}/guess`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ guess: guess })
+                });
+
+                await this.handleGuessResponse(response);
+            } catch (err) {
+                this.handleGuessError(err);
+            }
+        },
+
+        /**
+         * Set submission loading state and UI indicators
+         * @param {boolean} isLoading
+         */
+        setSubmissionLoading(isLoading) {
+            this.isSubmittingGuess = !!isLoading;
+            if (this.activeRowIndex >= 0 && this.elements.boardRows && this.elements.boardRows[this.activeRowIndex]) {
+                const activeRow = this.elements.boardRows[this.activeRowIndex];
+                if (isLoading) {
+                    activeRow.classList.add("is-submitting");
+                } else {
+                    activeRow.classList.remove("is-submitting");
+                }
+            }
+
+            if (isLoading) {
+                this.showInputFeedback("Checking guess...", "loading");
+            } else {
+                if (this.elements.guessFeedback && this.elements.guessFeedback.classList.contains("is-loading")) {
+                    this.clearInputFeedback();
+                }
+            }
+        },
+
+        /**
+         * Process response from POST /game/{game_id}/guess
+         * @param {Response} response
+         */
+        async handleGuessResponse(response) {
+            this.setSubmissionLoading(false);
+
+            if (response.status === 200) {
+                try {
+                    const updatedState = await response.json();
+                    this.clearInputFeedback();
+                    this.animateGuessReveal(updatedState);
+                } catch (e) {
+                    this.showInputFeedback("Unexpected response format from server.", "error");
+                }
+                return;
+            }
+
+            if (response.status === 400) {
+                let errorMsg = "Invalid guess. Please try again.";
+                try {
+                    const data = await response.json();
+                    if (data && typeof data.detail === "string") {
+                        errorMsg = data.detail;
+                    }
+                } catch (_) {}
+                this.showInputFeedback(errorMsg, "error");
+                return;
+            }
+
+            if (response.status === 401) {
+                this.showInputFeedback("Your session has expired. Please log in again.", "error");
+                this.updateStatusBadge("ready", "Login Required");
+                return;
+            }
+
+            if (response.status === 403) {
+                let errorMsg = "You do not have permission to access this game.";
+                try {
+                    const data = await response.json();
+                    if (data && typeof data.detail === "string") {
+                        errorMsg = data.detail;
+                    }
+                } catch (_) {}
+                this.showInputFeedback(errorMsg, "error");
+                this.updateStatusBadge("ready", "Forbidden");
+                return;
+            }
+
+            if (response.status === 404) {
+                this.showInputFeedback("Game not found. Please check the game ID or start a new game.", "error");
+                this.updateStatusBadge("ready", "Not Found");
+                return;
+            }
+
+            let errorMsg = "Unable to submit guess. Please try again.";
+            try {
+                const data = await response.json();
+                if (data && typeof data.detail === "string") {
+                    errorMsg = data.detail;
+                }
+            } catch (_) {}
+            this.showInputFeedback(errorMsg, "error");
+        },
+
+        /**
+         * Handle network or client-side fetch errors during guess submission
+         * @param {Error} error
+         */
+        handleGuessError(error) {
+            this.setSubmissionLoading(false);
+            this.showInputFeedback("Connection error. Please check your network and try again.", "error");
+        },
+
+        /**
+         * Sequentially reveal evaluation for the submitted guess row with 3D flip animation (Phase 4B-4A)
+         * @param {object} gameState
+         */
+        animateGuessReveal(gameState) {
+            if (!gameState) return;
+            this.gameState = gameState;
+
+            const submittedRow = this.activeRowIndex;
+            const guesses = gameState.guesses || [];
+            const latestGuess = guesses.length > 0 ? guesses[guesses.length - 1] : null;
+
+            if (!latestGuess || !latestGuess.evaluations || submittedRow < 0 || submittedRow >= 5) {
+                this.applyGuessResult(gameState);
+                return;
+            }
+
+            // Check reduced motion preference
+            const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (prefersReducedMotion) {
+                this.applyGuessResult(gameState);
+                return;
+            }
+
+            // Lock input and block duplicate submissions for the reveal duration
+            this.isRevealing = true;
+            this.clearRevealTimeouts();
+
+            const evaluations = latestGuess.evaluations;
+            const tileStaggerMs = 250;
+            const tileDurationMs = 500;
+            const totalDurationMs = (evaluations.length - 1) * tileStaggerMs + tileDurationMs; // 4 * 250 + 500 = 1500ms
+
+            // Sequentially trigger tile flips from left to right
+            for (let c = 0; c < 5; c++) {
+                const evalItem = evaluations[c];
+                if (!evalItem) continue;
+
+                const letter = evalItem.letter || (latestGuess.guess ? latestGuess.guess[c] : "");
+                this.setTileLetter(submittedRow, c, letter);
+
+                let state = "empty";
+                if (evalItem.result === "CORRECT") state = "correct";
+                else if (evalItem.result === "PRESENT") state = "present";
+                else if (evalItem.result === "ABSENT") state = "absent";
+
+                this.revealTile(submittedRow, c, state, c * tileStaggerMs);
+            }
+
+            // Schedule finalization callback after all 5 tiles finish revealing
+            const finalizeTimeout = setTimeout(() => {
+                this.isRevealing = false;
+
+                // 1. Update attempt metadata display
+                const attempts = typeof gameState.attempts === "number" ? gameState.attempts : 0;
+                const maxAttempts = typeof gameState.max_attempts === "number" ? gameState.max_attempts : 5;
+                if (this.elements.attemptsDisplay) {
+                    this.elements.attemptsDisplay.textContent = `${attempts} / ${maxAttempts}`;
+                }
+
+                // 2. Clear current staged input for the completed row
+                this.currentInput = "";
+
+                // 3. Status handling and row advancement or completion state
+                const status = (gameState.status || "IN_PROGRESS").toUpperCase();
+                if (status === "WON") {
+                    this.updateStatusBadge("won", "Won");
+                    this.setActiveRow(-1);
+                    this.showCompletedState(gameState, true);
+                } else if (status === "LOST") {
+                    this.updateStatusBadge("lost", "Lost");
+                    this.setActiveRow(-1);
+                    this.showCompletedState(gameState, false);
+                } else {
+                    // IN_PROGRESS: activate next row and re-enable typing
+                    this.updateStatusBadge("in-progress", "In Progress");
+                    if (attempts < maxAttempts) {
+                        this.setActiveRow(attempts);
+                    } else {
+                        this.setActiveRow(-1);
+                    }
+                }
+            }, totalDurationMs);
+
+            this.revealTimeouts.push(finalizeTimeout);
+        },
+
+        /**
+         * Apply successful guess result directly from backend response
+         * Maps CORRECT -> correct, PRESENT -> present, ABSENT -> absent
+         * @param {object} gameState
+         */
+        applyGuessResult(gameState) {
+            if (!gameState) return;
+            this.gameState = gameState;
+
+            // 1. Render evaluations directly onto the row that was just submitted
+            const submittedRow = this.activeRowIndex;
+            const guesses = gameState.guesses || [];
+            const latestGuess = guesses.length > 0 ? guesses[guesses.length - 1] : null;
+
+            if (latestGuess && latestGuess.evaluations && submittedRow >= 0 && submittedRow < 5) {
+                for (let c = 0; c < 5; c++) {
+                    const evalItem = latestGuess.evaluations[c];
+                    if (!evalItem) continue;
+
+                    const letter = evalItem.letter || (latestGuess.guess ? latestGuess.guess[c] : "");
+                    this.setTileLetter(submittedRow, c, letter);
+
+                    let state = "empty";
+                    if (evalItem.result === "CORRECT") state = "correct";
+                    else if (evalItem.result === "PRESENT") state = "present";
+                    else if (evalItem.result === "ABSENT") state = "absent";
+
+                    this.setTileState(submittedRow, c, state);
+                }
+            }
+
+            // 2. Update attempt metadata display
+            const attempts = typeof gameState.attempts === "number" ? gameState.attempts : 0;
+            const maxAttempts = typeof gameState.max_attempts === "number" ? gameState.max_attempts : 5;
+            if (this.elements.attemptsDisplay) {
+                this.elements.attemptsDisplay.textContent = `${attempts} / ${maxAttempts}`;
+            }
+
+            // 3. Clear current staged input for the completed row
+            this.currentInput = "";
+
+            // 4. Update status and handle active row advancement or completion
+            const status = (gameState.status || "IN_PROGRESS").toUpperCase();
+            if (status === "WON") {
+                this.updateStatusBadge("won", "Won");
+                this.setActiveRow(-1);
+                this.showCompletedState(gameState, true);
+            } else if (status === "LOST") {
+                this.updateStatusBadge("lost", "Lost");
+                this.setActiveRow(-1);
+                this.showCompletedState(gameState, false);
+            } else {
+                // IN_PROGRESS
+                this.updateStatusBadge("in-progress", "In Progress");
+                if (attempts < maxAttempts) {
+                    this.setActiveRow(attempts);
+                } else {
+                    this.setActiveRow(-1);
+                }
+            }
+        },
+
+        /**
+         * Show subtle inline feedback or error below the game board
+         * @param {string} message
+         * @param {"info"|"error"|"loading"} [type="info"]
+         */
+        showInputFeedback(message, type = "info") {
+            if (!this.elements.guessFeedback) return;
+            const el = this.elements.guessFeedback;
+            el.className = "guess-feedback";
+            if (type === "error") {
+                el.classList.add("is-error");
+            } else if (type === "loading") {
+                el.classList.add("is-loading");
+            } else {
+                el.classList.add("is-info");
+            }
+
+            if (type === "loading") {
+                el.innerHTML = '<span class="feedback-spinner" aria-hidden="true"></span><span class="feedback-text" id="feedback-text">' + (message || "Checking guess...") + '</span>';
+            } else {
+                el.innerHTML = '<span class="feedback-text" id="feedback-text">' + (message || "") + '</span>';
+            }
+            this.elements.feedbackText = document.getElementById("feedback-text");
+            el.classList.remove("is-hidden");
+        },
+
+        /**
+         * Clear subtle inline feedback if visible
+         */
+        clearInputFeedback() {
+            if (!this.elements.guessFeedback) return;
+            this.elements.guessFeedback.classList.add("is-hidden");
+            this.elements.guessFeedback.textContent = "";
         },
 
         /**
@@ -298,31 +658,86 @@
             this.currentInput = "";
         },
 
-        /**
-         * Set the start button loading and disabled state
-         * @param {boolean} isLoading
-         */
-        setStartButtonLoading(isLoading) {
-            const btn = this.elements.btnStartGame;
-            if (!btn) return;
-            this.isStartingGame = !!isLoading;
-            btn.disabled = !!isLoading;
 
-            if (isLoading) {
-                btn.classList.add("is-loading");
-                btn.innerHTML = '<span class="btn-spinner-sm" aria-hidden="true"></span><span class="btn-text">Starting...</span>';
+        /**
+         * Show inline feedback within the completion panel (daily limit, session expired, or errors)
+         * @param {string} message
+         * @param {"limit"|"error"} [type="error"]
+         */
+        showCompletionFeedback(message, type = "error") {
+            if (!this.elements.completionFeedback) return;
+            const el = this.elements.completionFeedback;
+            el.className = "completion-feedback";
+            if (type === "limit") {
+                el.classList.add("is-limit");
             } else {
-                btn.classList.remove("is-loading");
-                btn.innerHTML = '<span id="btn-start-game" class="btn-text">Start Game</span>';
+                el.classList.add("is-error");
+            }
+            if (this.elements.completionFeedbackText) {
+                this.elements.completionFeedbackText.textContent = message || "";
+            } else {
+                el.textContent = message || "";
+            }
+            el.classList.remove("is-hidden");
+        },
+
+        /**
+         * Clear completion panel inline feedback if visible
+         */
+        clearCompletionFeedback() {
+            if (!this.elements.completionFeedback) return;
+            this.elements.completionFeedback.classList.add("is-hidden");
+            if (this.elements.completionFeedbackText) {
+                this.elements.completionFeedbackText.textContent = "";
+            }
+        },
+
+        /**
+         * Set the start or play-again button loading and disabled state
+         * @param {boolean} isLoading
+         * @param {"start"|"play-again"} [triggerSource="start"]
+         */
+        setStartButtonLoading(isLoading, triggerSource = "start") {
+            this.isStartingGame = !!isLoading;
+
+            const startBtn = this.elements.btnStartGame;
+            if (startBtn) {
+                startBtn.disabled = !!isLoading;
+                if (isLoading && triggerSource === "start") {
+                    startBtn.classList.add("is-loading");
+                    startBtn.innerHTML = '<span class="btn-spinner-sm" aria-hidden="true"></span><span class="btn-text">Starting...</span>';
+                } else {
+                    startBtn.classList.remove("is-loading");
+                    startBtn.innerHTML = '<span id="btn-start-game" class="btn-text">Start Game</span>';
+                }
+            }
+
+            const playAgainBtn = this.elements.btnPlayAgain 
+                ? (this.elements.btnPlayAgain.tagName === "SPAN" ? (this.elements.btnPlayAgain.closest("button") || this.elements.btnPlayAgain) : this.elements.btnPlayAgain) 
+                : null;
+            if (playAgainBtn) {
+                playAgainBtn.disabled = !!isLoading;
+                if (isLoading && triggerSource === "play-again") {
+                    playAgainBtn.classList.add("is-loading");
+                    playAgainBtn.innerHTML = '<span class="btn-spinner-sm" aria-hidden="true"></span><span class="btn-text">Starting...</span>';
+                } else if (!isLoading) {
+                    playAgainBtn.classList.remove("is-loading");
+                    playAgainBtn.innerHTML = '<span id="btn-play-again" class="btn-text">Play Again</span>';
+                }
             }
         },
 
         /**
          * Initiate game creation via POST /game/start
+         * @param {"start"|"play-again"} [triggerSource="start"]
          */
-        async startGame() {
+        async startGame(triggerSource = "start") {
             if (this.isStartingGame) return;
-            this.setStartButtonLoading(true);
+            if (this.elements.stateError) {
+                this.elements.stateError.classList.add("is-hidden");
+            }
+            this.clearCompletionFeedback();
+            this.setStartButtonLoading(true, triggerSource);
 
             try {
                 const response = await fetch("/game/start", {
@@ -333,17 +748,18 @@
                     credentials: "same-origin"
                 });
 
-                await this.handleStartGameResponse(response);
+                await this.handleStartGameResponse(response, triggerSource);
             } catch (err) {
-                this.handleStartGameError(err);
+                this.handleStartGameError(err, triggerSource);
             }
         },
 
         /**
          * Process response from POST /game/start
          * @param {Response} response
+         * @param {"start"|"play-again"} [triggerSource="start"]
          */
-        async handleStartGameResponse(response) {
+        async handleStartGameResponse(response, triggerSource = "start") {
             if (response.status === 201) {
                 try {
                     const data = await response.json();
@@ -358,51 +774,82 @@
             }
 
             // Non-201 response: re-enable button and handle states
-            this.setStartButtonLoading(false);
+            this.setStartButtonLoading(false, triggerSource);
 
             if (response.status === 429) {
                 let limitMsg = "You have completed your 3 game sessions for today. Come back tomorrow for new words!";
                 try {
                     const data = await response.json();
-                    if (data && typeof data.detail === "string") {
-                        limitMsg = data.detail;
+                    if (data && typeof data.detail === "string" && data.detail.trim()) {
+                        limitMsg = data.detail.trim();
                     }
                 } catch (_) {}
 
-                if (this.elements.limitMessage) {
-                    this.elements.limitMessage.textContent = limitMsg;
+                if (this.elements.dailyGamesDisplay) {
+                    this.elements.dailyGamesDisplay.textContent = "3 / 3";
                 }
-                this.showState("limit", { keepReady: true });
-                this.updateStatusBadge("ready", "Limit Reached");
+
+                if (triggerSource === "play-again") {
+                    // Keep completed game state intact and visible
+                    this.showCompletionFeedback(limitMsg, "limit");
+                    const playAgainBtn = this.elements.btnPlayAgain 
+                        ? (this.elements.btnPlayAgain.tagName === "SPAN" ? (this.elements.btnPlayAgain.closest("button") || this.elements.btnPlayAgain) : this.elements.btnPlayAgain) 
+                        : null;
+                    if (playAgainBtn) {
+                        playAgainBtn.disabled = true;
+                        playAgainBtn.innerHTML = '<span id="btn-play-again" class="btn-text">Daily Limit Reached</span>';
+                    }
+                } else {
+                    if (this.elements.limitMessage) {
+                        this.elements.limitMessage.textContent = limitMsg;
+                    }
+                    this.showState("limit", { keepReady: true });
+                    this.updateStatusBadge("ready", "Limit Reached");
+                }
                 return;
             }
 
             if (response.status === 401) {
-                this.showError("Your session has expired. Please log in again to start a game.", true);
-                this.updateStatusBadge("ready", "Login Required");
+                if (triggerSource === "play-again") {
+                    this.showCompletionFeedback("Your session has expired. Please log in again to start a game.", "error");
+                    this.updateStatusBadge("ready", "Login Required");
+                } else {
+                    this.showError("Your session has expired. Please log in again to start a game.", true);
+                    this.updateStatusBadge("ready", "Login Required");
+                }
                 return;
             }
 
             let errorMsg = "Unable to start game. Please try again.";
             try {
                 const data = await response.json();
-                if (data && typeof data.detail === "string") {
-                    errorMsg = data.detail;
+                if (data && typeof data.detail === "string" && data.detail.trim()) {
+                    errorMsg = data.detail.trim();
                 }
             } catch (_) {}
 
-            this.showError(errorMsg, true);
-            this.updateStatusBadge("ready", "Error");
+            if (triggerSource === "play-again") {
+                this.showCompletionFeedback(errorMsg, "error");
+            } else {
+                this.showError(errorMsg, true);
+                this.updateStatusBadge("ready", "Error");
+            }
         },
 
         /**
          * Handle network or unexpected exceptions during game start
          * @param {Error} error
+         * @param {"start"|"play-again"} [triggerSource="start"]
          */
-        handleStartGameError(error) {
-            this.setStartButtonLoading(false);
-            this.showError("Unable to connect to the game server. Please check your network and try again.", true);
-            this.updateStatusBadge("ready", "Offline");
+        handleStartGameError(error, triggerSource = "start") {
+            this.setStartButtonLoading(false, triggerSource);
+            const msg = "Unable to connect to the game server. Please check your network and try again.";
+            if (triggerSource === "play-again") {
+                this.showCompletionFeedback(msg, "error");
+            } else {
+                this.showError(msg, true);
+                this.updateStatusBadge("ready", "Offline");
+            }
         },
 
         /**
@@ -417,8 +864,21 @@
                 }
 
                 const gameId = urlParams.get("game_id") || (this.elements.container ? this.elements.container.dataset.gameId : null);
+                const isDailyLimitReached = this.elements.container && this.elements.container.dataset.dailyLimitReached === "true";
+
                 if (gameId && gameId.trim() !== "") {
+                    // Always load the active/requested game session first
                     this.loadGameState(gameId.trim());
+                } else if (isDailyLimitReached) {
+                    // No game_id and daily limit reached: display limit state cleanly
+                    this.gameState = null;
+                    this.resetBoard();
+                    this.showState("limit", { keepReady: true });
+                    this.updateStatusBadge("ready", "Limit Reached");
+                    if (this.elements.btnStartGame) {
+                        this.elements.btnStartGame.disabled = true;
+                        this.elements.btnStartGame.innerHTML = '<span id="btn-start-game" class="btn-text">Daily Limit Reached</span>';
+                    }
                 } else {
                     // No game_id: remain in ready state, empty board, make zero API requests
                     this.gameState = null;
@@ -436,6 +896,7 @@
          * @param {string|number} gameId
          */
         async loadGameState(gameId) {
+            this.resetBoard();
             this.showState("loading");
             try {
                 const response = await fetch(`/game/${encodeURIComponent(gameId)}`, {
@@ -488,6 +949,10 @@
          */
         resetBoard() {
             this.clearCurrentInput();
+            this.clearInputFeedback();
+            this.clearCompletionFeedback();
+            this.clearRevealTimeouts();
+            this.isRevealing = false;
             this.activeRowIndex = -1;
             for (let r = 0; r < 5; r++) {
                 for (let c = 0; c < 5; c++) {
@@ -502,6 +967,9 @@
             }
             if (this.elements.completionTargetWrapper) {
                 this.elements.completionTargetWrapper.classList.add("is-hidden");
+            }
+            if (this.elements.stateCompleted) {
+                this.elements.stateCompleted.classList.remove("is-won", "is-lost");
             }
         },
 
@@ -597,17 +1065,51 @@
         },
 
         /**
-         * Display completed game state banner with revealed target word
+         * Display completed game state banner with revealed target word (Phase 4B-4B)
          * @param {object} gameState
          * @param {boolean} isWin
          */
         showCompletedState(gameState, isWin) {
+            const panel = this.elements.stateCompleted;
+            if (panel) {
+                panel.classList.remove("is-won", "is-lost");
+                panel.classList.add(isWin ? "is-won" : "is-lost");
+            }
+
+            if (this.elements.completionIcon) {
+                // WON: clean emerald check (&#10003;), LOST: clean subtle marker (&#10005;)
+                this.elements.completionIcon.innerHTML = isWin ? "&#10003;" : "&#10005;";
+                this.elements.completionIcon.setAttribute("aria-label", isWin ? "Victory" : "Game Over");
+            }
+
+            const attempts = typeof gameState.attempts === "number" ? gameState.attempts : (isWin ? 1 : 5);
+            const maxAttempts = typeof gameState.max_attempts === "number" ? gameState.max_attempts : 5;
+
             if (this.elements.completionTitle) {
                 this.elements.completionTitle.textContent = isWin ? "Splendid! Game Won" : "Game Over";
             }
+
             if (this.elements.completionMessage) {
-                this.elements.completionMessage.textContent = gameState.message || (isWin ? "Congratulations! You guessed the word correctly!" : "You ran out of attempts.");
+                if (gameState.message) {
+                    this.elements.completionMessage.textContent = gameState.message;
+                } else if (isWin) {
+                    const winPhrases = {
+                        1: "Genius! Solved on the very first try!",
+                        2: "Magnificent! Outstanding deduction!",
+                        3: "Impressive! Excellent word mastery!",
+                        4: "Splendid! Well played!",
+                        5: "Phew! Solved in the nick of time!"
+                    };
+                    this.elements.completionMessage.textContent = winPhrases[attempts] || "Congratulations! You guessed the word correctly!";
+                } else {
+                    this.elements.completionMessage.textContent = "Better luck next time! The daily word challenge resets every day.";
+                }
             }
+
+            if (this.elements.completionAttempts) {
+                this.elements.completionAttempts.textContent = `${attempts} / ${maxAttempts}`;
+            }
+
             if (this.elements.completionTargetWrapper && this.elements.completionTarget) {
                 if (gameState.target_word) {
                     this.elements.completionTarget.textContent = gameState.target_word;
@@ -616,7 +1118,32 @@
                     this.elements.completionTargetWrapper.classList.add("is-hidden");
                 }
             }
+
+            this.clearInputFeedback();
+            this.clearCompletionFeedback();
+
+            // Re-enable Play Again button if not currently starting a game
+            const playAgainBtn = this.elements.btnPlayAgain 
+                ? (this.elements.btnPlayAgain.tagName === "SPAN" ? (this.elements.btnPlayAgain.closest("button") || this.elements.btnPlayAgain) : this.elements.btnPlayAgain) 
+                : null;
+            if (playAgainBtn && !this.isStartingGame) {
+                playAgainBtn.disabled = false;
+                playAgainBtn.classList.remove("is-loading");
+                playAgainBtn.innerHTML = '<span id="btn-play-again" class="btn-text">Play Again</span>';
+            }
+
             this.showState("completed");
+
+            // Keyboard accessibility: focus Play Again button if enabled, or fallback to completion panel
+            if (playAgainBtn && !playAgainBtn.disabled && typeof playAgainBtn.focus === "function") {
+                try {
+                    playAgainBtn.focus({ preventScroll: true });
+                } catch (_) {}
+            } else if (this.elements.stateCompleted && typeof this.elements.stateCompleted.focus === "function") {
+                try {
+                    this.elements.stateCompleted.focus({ preventScroll: true });
+                } catch (_) {}
+            }
         },
 
         /**
