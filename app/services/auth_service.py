@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.enums.role import UserRole
 from app.models.user import User
+from app.schemas.auth import validate_password, validate_username
 
 # Password hashing configuration using Argon2id via pwdlib
 password_hash_context = PasswordHash.recommended()
@@ -97,3 +98,51 @@ def authenticate_user(db: Session, username: str, password: str) -> User | None:
         return None
 
     return user
+
+
+def create_admin_account(
+    db: Session,
+    username: str,
+    password: str,
+    confirm_password: str | None = None,
+) -> User:
+    """Create a new user with ADMIN role after validating credentials.
+
+    Validates:
+    - Username length and format (via validate_username)
+    - Password confirmation match (if confirm_password is provided)
+    - Password complexity (via validate_password)
+    - Uniqueness of username
+
+    Hashes password using Argon2id and commits transaction.
+    Rolls back transaction on failure.
+    Raises ValueError on validation failure or if username is taken.
+    """
+    normalized_username = username.strip().lower() if username else ""
+
+    valid_u, u_err = validate_username(normalized_username)
+    if not valid_u:
+        raise ValueError(u_err)
+
+    if confirm_password is not None and password != confirm_password:
+        raise ValueError("Passwords do not match.")
+
+    valid_p, p_err = validate_password(password)
+    if not valid_p:
+        raise ValueError(p_err)
+
+    if get_user_by_username(db, normalized_username) is not None:
+        raise ValueError(f"Username '{normalized_username}' is already taken.")
+
+    try:
+        user = register_user(
+            db=db,
+            username=normalized_username,
+            password=password,
+            role=UserRole.ADMIN,
+        )
+        return user
+    except Exception:
+        db.rollback()
+        raise
+
