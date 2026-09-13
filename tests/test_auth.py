@@ -104,14 +104,47 @@ def test_password_missing_required_special_character_fails(client: TestClient):
     assert "special characters: $, %, *" in response.text
 
     # Verify each allowed special character succeeds
-    for allowed_char in ("$", "%", "*"):
-        u_name = f"user_with_{ord(allowed_char)}"
+    char_labels = {"$": "dollar", "%": "percent", "*": "asterisk"}
+    for allowed_char, label in char_labels.items():
+        u_name = f"userwith{label}"
         res = client.post(
             "/register",
             data={"username": u_name, "password": f"Password1{allowed_char}"},
             follow_redirects=False,
         )
         assert res.status_code == status.HTTP_303_SEE_OTHER
+
+
+def test_username_with_non_alphabetic_characters_fails(client: TestClient):
+    """Verify registration fails when username contains non-alphabetic characters."""
+    # Digits in username
+    res_digits = client.post(
+        "/register",
+        data={"username": "player1", "password": "Password1$"},
+    )
+    assert res_digits.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Username must contain only alphabetic letters." in res_digits.text
+
+    # Underscores / punctuation in username
+    res_punct = client.post(
+        "/register",
+        data={"username": "user_test", "password": "Password1$"},
+    )
+    assert res_punct.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Username must contain only alphabetic letters." in res_punct.text
+
+
+def test_username_with_mixed_case_letters_normalizes(client: TestClient, db_session: Session):
+    """Verify usernames with mixed uppercase and lowercase letters succeed and normalize."""
+    res = client.post(
+        "/register",
+        data={"username": "AliceWonder", "password": "Password1$"},
+        follow_redirects=False,
+    )
+    assert res.status_code == status.HTTP_303_SEE_OTHER
+    user = get_user_by_username(db_session, "alicewonder")
+    assert user is not None
+    assert user.username == "alicewonder"
 
 
 def test_duplicate_username_rejected(client: TestClient, db_session: Session):

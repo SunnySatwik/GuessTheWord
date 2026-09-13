@@ -104,6 +104,24 @@ def test_create_admin_invalid_username_rejected(db_session: Session):
             confirm_password="ValidPass1$",
         )
 
+    # Non-alphabetic username (digits)
+    with pytest.raises(ValueError, match="only alphabetic letters"):
+        create_admin_account(
+            db=db_session,
+            username="admin123",
+            password="ValidPass1$",
+            confirm_password="ValidPass1$",
+        )
+
+    # Non-alphabetic username (symbols)
+    with pytest.raises(ValueError, match="only alphabetic letters"):
+        create_admin_account(
+            db=db_session,
+            username="admin_lead",
+            password="ValidPass1$",
+            confirm_password="ValidPass1$",
+        )
+
 
 def test_create_admin_invalid_password_rejected(db_session: Session):
     """Verify passwords failing complexity requirements are rejected with ValueError."""

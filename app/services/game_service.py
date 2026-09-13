@@ -129,15 +129,16 @@ def start_game(db: Session, user_id: int) -> Game:
 
 
 def validate_guess(raw_guess: str) -> str:
-    """Validate and normalize a user guess.
+    """Validate a user guess according to the official specification.
 
-    Must be exactly 5 alphabetic characters.
-    Returns the normalized uppercase string.
+    Must be exactly 5 uppercase alphabetic characters.
     """
     cleaned = raw_guess.strip() if raw_guess else ""
     if len(cleaned) != WORD_LENGTH or not cleaned.isalpha():
         raise InvalidGuessError(f"Guess must be exactly {WORD_LENGTH} alphabetic letters.")
-    return cleaned.upper()
+    if not cleaned.isupper():
+        raise InvalidGuessError("Guess must be uppercase letters.")
+    return cleaned
 
 
 def submit_guess(

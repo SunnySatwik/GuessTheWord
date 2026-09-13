@@ -9,10 +9,17 @@ ALLOWED_SPECIAL_CHARS = {"$", "%", "*"}
 
 
 def validate_username(username: str) -> tuple[bool, str]:
-    """Validate username according to specification (at least 5 characters)."""
+    """Validate username according to specification:
+    - At least 5 letters
+    - Letters only (both upper and lower case accepted)
+    """
     cleaned = username.strip() if username else ""
     if len(cleaned) < 5:
         return False, "Username must be at least 5 characters long."
+
+    if not cleaned.isalpha():
+        return False, "Username must contain only alphabetic letters."
+
     return True, ""
 
 

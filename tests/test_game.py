@@ -206,10 +206,14 @@ def test_api_start_game_unauthenticated_rejected(client: TestClient):
 # ============================================================================
 
 
-def test_validate_guess_normalization():
-    """Verify valid 5-letter guess is normalized to uppercase."""
-    assert validate_guess("crane") == "CRANE"
+def test_validate_guess_uppercase_enforcement():
+    """Verify valid 5-letter uppercase guess is accepted and lowercase is rejected."""
+    assert validate_guess("CRANE") == "CRANE"
     assert validate_guess(" APPLE ") == "APPLE"
+    with pytest.raises(InvalidGuessError, match="uppercase"):
+        validate_guess("crane")
+    with pytest.raises(InvalidGuessError, match="uppercase"):
+        validate_guess("Crane")
 
 
 @pytest.mark.parametrize("invalid_guess", [
@@ -435,10 +439,17 @@ def test_api_guess_submission_flow(client: TestClient, db_session: Session):
     assert start_res.status_code == status.HTTP_201_CREATED
     game_id = start_res.json()["game_id"]
 
-    # Submit valid guess
+    # Lowercase guess must be rejected per uppercase-only requirement
+    bad_guess_res = client.post(
+        f"/game/{game_id}/guess",
+        json={"guess": "cloud"},
+    )
+    assert bad_guess_res.status_code == status.HTTP_400_BAD_REQUEST
+
+    # Submit valid uppercase guess
     guess_res = client.post(
         f"/game/{game_id}/guess",
-        json={"guess": "cloud"},  # lowercase should be normalized
+        json={"guess": "CLOUD"},
     )
     assert guess_res.status_code == status.HTTP_200_OK
     data = guess_res.json()
@@ -1074,16 +1085,19 @@ def test_submitted_guess_is_normalized_to_uppercase(client: TestClient, db_sessi
     submit_guess_block = js[submit_guess_idx:submit_guess_idx + 400]
     assert "this.currentInput.toUpperCase()" in submit_guess_block
 
-    # Test backend accepts lowercase and normalizes to uppercase
+    # Test backend rejects lowercase input per uppercase requirement
     seed_words(db_session)
     user = register_user(db_session, username="uppercasetester", password="Password1$")
     token = create_session_token(user.id)
     client.cookies.set(SESSION_COOKIE_NAME, token)
 
     game = start_game(db_session, user.id)
-    res = client.post(f"/game/{game.id}/guess", json={"guess": "crane"})
-    assert res.status_code == status.HTTP_200_OK
-    data = res.json()
+    res_lower = client.post(f"/game/{game.id}/guess", json={"guess": "crane"})
+    assert res_lower.status_code == status.HTTP_400_BAD_REQUEST
+
+    res_upper = client.post(f"/game/{game.id}/guess", json={"guess": "CRANE"})
+    assert res_upper.status_code == status.HTTP_200_OK
+    data = res_upper.json()
     assert data["guesses"][0]["guess"] == "CRANE"
 
 
