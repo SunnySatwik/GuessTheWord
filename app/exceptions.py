@@ -42,3 +42,11 @@ class InvalidGuessError(GameError):
 
     def __init__(self, message: str = "Guess must be exactly 5 alphabetic letters."):
         super().__init__(message)
+
+
+class UserNotFoundError(GameError):
+    """Raised when the requested user does not exist."""
+
+    def __init__(self, message: str = "User not found."):
+        super().__init__(message)
+

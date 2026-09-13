@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Reports &bull; Guess the Word{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-page-container">
+    <!-- Admin Header -->
+    <header class="admin-header">
+        <div class="admin-header-content">
+            <h2 class="admin-title">Admin Reports</h2>
+            <p class="admin-subtitle">System analytics and daily player engagement</p>
+        </div>
+    </header>
+
+    <!-- Daily Report Section -->
+    <section class="admin-card daily-report-card" id="daily-report-section" aria-labelledby="daily-report-heading">
+        <div class="card-header">
+            <div class="header-titles">
+                <h3 class="card-title" id="daily-report-heading">Daily Activity Report</h3>
+                <p class="card-subtitle">Aggregate metrics for game sessions started on a selected date</p>
+            </div>
+            <span class="report-badge" id="report-badge">Daily</span>
+        </div>
+
+        <!-- Filter / Date Control Bar -->
+        <form class="report-controls" id="daily-report-form" novalidate>
+            <div class="control-group">
+                <label for="report-date-input" class="control-label">Report Date (UTC)</label>
+                <input
+                    type="date"
+                    id="report-date-input"
+                    name="date"
+                    class="control-input date-input"
+                    required
+                    aria-describedby="date-help"
+                >
+                <span id="date-help" class="control-help">Filter games by their UTC start date</span>
+            </div>
+            <div class="control-actions">
+                <button type="submit" class="btn btn-primary btn-run-report" id="btn-run-daily-report">
+                    <span class="btn-text" id="btn-run-text">Run Report</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Status / Feedback Banner (Loading / Error) -->
+        <div class="report-feedback is-hidden" id="report-feedback" role="status" aria-live="polite">
+            <span class="feedback-spinner is-hidden" id="feedback-spinner" aria-hidden="true"></span>
+            <span class="feedback-text" id="feedback-text"></span>
+        </div>
+
+        <!-- Date Context Indicator -->
+        <div class="report-context-bar" id="report-context-bar" aria-live="polite">
+            <span class="context-label">Showing results for:</span>
+            <strong class="context-date tabular" id="context-date-display">--</strong>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid" id="metrics-grid" role="region" aria-label="Daily Report Metrics">
+            <!-- Metric Card 1: Number of Users -->
+            <div class="metric-card metric-card-users" id="metric-card-users">
+                <div class="metric-header">
+                    <span class="metric-label">Active Users</span>
+                    <span class="metric-icon" aria-hidden="true">&#128100;</span>
+                </div>
+                <div class="metric-value-container">
+                    <span class="metric-value tabular" id="metric-users-value">--</span>
+                </div>
+                <p class="metric-description">Distinct players who started &ge; 1 game</p>
+            </div>
+
+            <!-- Metric Card 2: Correct Guesses (Won Games) -->
+            <div class="metric-card metric-card-correct" id="metric-card-correct">
+                <div class="metric-header">
+                    <span class="metric-label">Correct Guesses</span>
+                    <span class="metric-icon" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="metric-value-container">
+                    <span class="metric-value tabular" id="metric-correct-value">--</span>
+                </div>
+                <p class="metric-description">Games won whose session began on this date</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- User Report Section (Phase 4C-3) -->
+    <section class="admin-card user-report-card" id="user-report-section" aria-labelledby="user-report-heading">
+        <div class="card-header">
+            <div class="header-titles">
+                <h3 class="card-title" id="user-report-heading">User Activity Report</h3>
+                <p class="card-subtitle">Detailed session activity and performance for an individual player</p>
+            </div>
+            <span class="report-badge" id="user-report-badge">Per-User</span>
+        </div>
+
+        <!-- Filter / User & Date Control Bar -->
+        <form class="report-controls" id="user-report-form" novalidate>
+            <div class="control-group">
+                <label for="user-select" class="control-label">Select User</label>
+                <select
+                    id="user-select"
+                    name="user_id"
+                    class="control-input control-select"
+                    required
+                    aria-describedby="user-help"
+                >
+                    <option value="" disabled selected>Loading users...</option>
+                </select>
+                <span id="user-help" class="control-help">Choose player to generate report for</span>
+            </div>
+
+            <div class="control-group">
+                <label for="user-report-date-input" class="control-label">Report Date (UTC)</label>
+                <input
+                    type="date"
+                    id="user-report-date-input"
+                    name="date"
+                    class="control-input date-input"
+                    required
+                    aria-describedby="user-date-help"
+                >
+                <span id="user-date-help" class="control-help">Filter sessions by their UTC start date</span>
+            </div>
+
+            <div class="control-actions">
+                <button type="submit" class="btn btn-primary btn-run-report" id="btn-run-user-report">
+                    <span class="btn-text" id="btn-run-user-text">Run Report</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Status / Feedback Banner (Loading / Error) -->
+        <div class="report-feedback is-hidden" id="user-report-feedback" role="status" aria-live="polite">
+            <span class="feedback-spinner is-hidden" id="user-feedback-spinner" aria-hidden="true"></span>
+            <span class="feedback-text" id="user-feedback-text"></span>
+        </div>
+
+        <!-- User & Date Context Indicator -->
+        <div class="report-context-bar" id="user-context-bar" aria-live="polite">
+            <span class="context-label">Showing results for:</span>
+            <strong class="context-user" id="user-context-username">--</strong>
+            <span class="context-separator" aria-hidden="true">&bull;</span>
+            <strong class="context-date tabular" id="user-context-date">--</strong>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid" id="user-metrics-grid" role="region" aria-label="User Report Metrics">
+            <!-- Metric Card 1: Words Tried -->
+            <div class="metric-card metric-card-words-tried" id="metric-card-words-tried">
+                <div class="metric-header">
+                    <span class="metric-label">Words Tried</span>
+                    <span class="metric-icon" aria-hidden="true">&#127919;</span>
+                </div>
+                <div class="metric-value-container">
+                    <span class="metric-value tabular" id="metric-words-tried-value">--</span>
+                </div>
+                <p class="metric-description">Total game sessions started on this date</p>
+            </div>
+
+            <!-- Metric Card 2: Correct Guesses -->
+            <div class="metric-card metric-card-user-correct" id="metric-card-user-correct">
+                <div class="metric-header">
+                    <span class="metric-label">Correct Guesses</span>
+                    <span class="metric-icon" aria-hidden="true">&#10003;</span>
+                </div>
+                <div class="metric-value-container">
+                    <span class="metric-value tabular" id="metric-user-correct-value">--</span>
+                </div>
+                <p class="metric-description">Games won whose session began on this date</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='js/admin.js') }}" defer></script>
+{% endblock %}

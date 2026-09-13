@@ -17,6 +17,9 @@
             <nav class="nav-links">
                 {% if user %}
                     <a href="/game" class="nav-link">Play Game</a>
+                    {% if user.role.value == 'ADMIN' %}
+                    <a href="/admin/reports" class="nav-link" id="nav-admin-reports">Admin Reports</a>
+                    {% endif %}
                     <span class="user-pill">
                         <span class="user-name">{{ user.username }}</span>
                         <span class="role-badge">{{ user.role.value }}</span>
