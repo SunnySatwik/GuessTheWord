@@ -4,24 +4,20 @@
 
 {% block content %}
 <section class="card verification-card">
-    <div class="status-indicator">
-        <span class="status-dot"></span>
-        <span class="status-text">Application Online</span>
-    </div>
-    <h2>Backend Foundation Verified</h2>
-    <p class="subtitle">FastAPI backend, SQLAlchemy 2.x SQLite models, and Argon2 authentication are active.</p>
+    <h2>Welcome to Guess the Word</h2>
+    <p class="subtitle">FastAPI-powered application with a secure SQLite data layer and protected user authentication.</p>
 
     <div class="info-grid">
         <div class="info-item">
-            <span class="info-label">Application</span>
-            <span class="info-value">{{ app_name }}</span>
+            <span class="info-label">Game Mode</span>
+            <span class="info-value">5-Letter Word Puzzle</span>
         </div>
         <div class="info-item">
-            <span class="info-label">Environment</span>
-            <span class="info-value badge">{{ environment }}</span>
+            <span class="info-label">Daily Limit</span>
+            <span class="info-value">3 Games / Day</span>
         </div>
         <div class="info-item">
-            <span class="info-label">Current Session</span>
+            <span class="info-label">Current Player</span>
             {% if user %}
                 <span class="info-value badge success">{{ user.username }} ({{ user.role.value }})</span>
             {% else %}
@@ -40,8 +36,6 @@
             <a href="/login" class="btn btn-primary">Log In</a>
             <a href="/register" class="btn btn-secondary">Register New User</a>
         {% endif %}
-        <a href="/health" class="btn btn-secondary">Health Endpoint</a>
-        <a href="/docs" class="btn btn-secondary">API Docs</a>
     </div>
 </section>
 {% endblock %}

@@ -520,7 +520,6 @@ def test_get_game_page_authenticated(client: TestClient, db_session: Session):
     # 5x5 Game Board Grid Structure (Phase 4B-2A)
     assert 'id="game-board"' in html
     assert 'role="grid"' in html
-    assert 'id="controls-placeholder"' in html
     assert html.count('class="board-row"') == 5
     assert html.count('class="board-tile"') == 25
 

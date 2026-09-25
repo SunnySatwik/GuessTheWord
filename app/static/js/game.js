@@ -54,7 +54,6 @@
                 boardRows: document.querySelectorAll(".board-row"),
                 boardTiles: document.querySelectorAll(".board-tile"),
                 gameControls: document.getElementById("game-controls"),
-                controlsPlaceholder: document.getElementById("controls-placeholder"),
                 guessFeedback: document.getElementById("guess-feedback"),
                 feedbackText: document.getElementById("feedback-text"),
                 completionIcon: document.getElementById("completion-icon"),

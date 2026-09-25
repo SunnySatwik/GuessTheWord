@@ -29,7 +29,7 @@ def test_root_endpoint(client: TestClient):
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
     assert "Guess the Word" in response.text
-    assert "Backend Foundation Verified" in response.text
+    assert "Welcome to Guess the Word" in response.text
 
 
 def test_static_files_accessible(client: TestClient):
