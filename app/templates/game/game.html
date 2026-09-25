@@ -8,7 +8,8 @@
 
 {% block content %}
 <div class="game-page-container" data-game-id="{{ game_id or '' }}" data-daily-limit-reached="{% if games_today >= max_daily_games %}true{% else %}false{% endif %}">
-    <!-- Compact Game Header -->
+
+    <!-- ═══ Compact Game Header ═══ -->
     <header class="game-header">
         <div class="header-content">
             <h2 class="game-title">Guess the Word</h2>
@@ -16,33 +17,60 @@
         </div>
     </header>
 
-    <!-- Game Meta / Status Bar -->
+    <!-- ═══ Premium HUD Bar ═══ -->
     <section class="game-meta" aria-label="Game session information">
-        <div class="meta-item">
+
+        <!-- Attempt indicator: 5 pip dots -->
+        <div class="meta-item hud-attempts">
             <span class="meta-label">Attempt</span>
+            <div class="attempt-pips" id="attempt-pips" aria-hidden="true">
+                <span class="attempt-pip" data-pip="1"></span>
+                <span class="attempt-pip" data-pip="2"></span>
+                <span class="attempt-pip" data-pip="3"></span>
+                <span class="attempt-pip" data-pip="4"></span>
+                <span class="attempt-pip" data-pip="5"></span>
+            </div>
             <span class="meta-value tabular" id="attempts-display" aria-live="polite" aria-atomic="true">0 / 5</span>
         </div>
-        <div class="meta-item">
-            <span class="meta-label">Daily Limit</span>
-            <span class="meta-value tabular" id="daily-games-display">{{ games_today }} / {{ max_daily_games }}</span>
-        </div>
-        <div class="meta-item">
+
+        <!-- Status badge -->
+        <div class="meta-item hud-status">
             <span class="meta-label">Status</span>
             <span class="status-badge" id="game-status-badge">Ready</span>
         </div>
+
+        <!-- Daily limit: segmented meter -->
+        <div class="meta-item hud-daily">
+            <span class="meta-label">Today</span>
+            <div class="daily-segs" id="daily-segs" aria-hidden="true">
+                <span class="daily-seg {% if games_today >= 1 %}is-used{% endif %}" data-seg="1"></span>
+                <span class="daily-seg {% if games_today >= 2 %}is-used{% endif %}" data-seg="2"></span>
+                <span class="daily-seg {% if games_today >= 3 %}is-used{% endif %}" data-seg="3"></span>
+            </div>
+            <span class="meta-value tabular" id="daily-games-display">{{ games_today }} / {{ max_daily_games }}</span>
+        </div>
+
     </section>
 
-    <!-- State Banners / Feedback Area -->
+    <!-- ═══ State Panels / Feedback ═══ -->
     <div class="game-state-container" aria-live="polite">
-        <!-- Ready State Banner -->
+
+        <!-- Ready State -->
         <div class="state-panel state-ready" id="state-ready">
-            <p class="state-message">Guess the secret 5-letter English word within 5 attempts.</p>
+            <div class="ready-content">
+                <p class="state-message">Guess the secret 5-letter word within 5 attempts.</p>
+                <ul class="rules-hint" aria-label="Color key">
+                    <li><span class="hint-swatch swatch-correct" aria-hidden="true"></span><span>Correct position</span></li>
+                    <li><span class="hint-swatch swatch-present" aria-hidden="true"></span><span>Wrong position</span></li>
+                    <li><span class="hint-swatch swatch-absent"  aria-hidden="true"></span><span>Not in word</span></li>
+                </ul>
+            </div>
             <button type="button" class="btn btn-primary btn-game-action" id="action-start-game" {% if games_today >= max_daily_games %}disabled{% endif %}>
                 <span id="btn-start-game" class="btn-text">{% if games_today >= max_daily_games %}Daily Limit Reached{% else %}Start Game{% endif %}</span>
             </button>
         </div>
 
-        <!-- Completed State Banner (Hidden Initially) -->
+        <!-- Completed State (Hidden Initially) -->
         <div class="state-panel state-completed is-hidden" id="state-completed" role="region" aria-label="Game Completion Summary" tabindex="-1">
             <div class="completion-header">
                 <div class="completion-icon" id="completion-icon" aria-hidden="true">&#10003;</div>
@@ -71,26 +99,32 @@
             </div>
         </div>
 
-        <!-- Daily Limit Reached Banner (Conditional / Dynamic) -->
+        <!-- Daily Limit Reached Banner -->
         <div class="state-panel state-limit {% if games_today < max_daily_games %}is-hidden{% endif %}" id="state-limit">
+            <div class="limit-icon" aria-hidden="true">&#9646;&#9646;&#9646;</div>
             <span class="limit-tag">Daily Limit Reached</span>
-            <p class="limit-message" id="limit-message">You have completed your 3 game sessions for today. Come back tomorrow for new words!</p>
+            <p class="limit-message" id="limit-message">You've played all 3 games for today. Come back tomorrow for new words!</p>
+            <div class="limit-segs" aria-hidden="true">
+                <span class="limit-seg is-full"></span>
+                <span class="limit-seg is-full"></span>
+                <span class="limit-seg is-full"></span>
+            </div>
         </div>
 
-        <!-- Loading State Banner (Hidden Initially) -->
+        <!-- Loading State -->
         <div class="state-panel state-loading is-hidden" id="state-loading">
             <span class="spinner" aria-hidden="true"></span>
             <span>Setting up your game...</span>
         </div>
 
-        <!-- Error State Banner (Hidden Initially) -->
+        <!-- Error State -->
         <div class="state-panel state-error is-hidden" id="state-error">
             <span class="error-icon" aria-hidden="true">&excl;</span>
             <span class="error-text" id="error-text">An error occurred. Please try again.</span>
         </div>
     </div>
 
-    <!-- Main Game Board (5x5 Guess Grid) -->
+    <!-- ═══ Main Game Board ═══ -->
     <main class="game-stage" id="game-stage" aria-label="Game board stage">
         <div class="game-board" id="game-board" role="grid" aria-label="5 by 5 guess board">
             {% for row in range(5) %}
@@ -103,12 +137,13 @@
         </div>
     </main>
 
-    <!-- Inline Guess Feedback Container (Subtle Length/Error/Loading Feedback) -->
+    <!-- ═══ Inline Guess Feedback ═══ -->
     <div class="guess-feedback is-hidden" id="guess-feedback" role="status" aria-live="polite">
+        <span class="feedback-icon" aria-hidden="true"></span>
         <span class="feedback-text" id="feedback-text"></span>
     </div>
 
-    <!-- Interaction Stage (Physical Keyboard Input) -->
+    <!-- ═══ Interaction Stage (Physical Keyboard) ═══ -->
     <section class="game-controls" id="game-controls" aria-label="Game interaction controls"></section>
 </div>
 {% endblock %}

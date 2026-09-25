@@ -61,6 +61,9 @@
                 btnPlayAgain: document.getElementById("action-play-again") || document.getElementById("btn-play-again"),
                 completionFeedback: document.getElementById("completion-feedback"),
                 completionFeedbackText: document.getElementById("completion-feedback-text"),
+                // HUD Phase 3
+                attemptPips: document.querySelectorAll(".attempt-pip"),
+                dailySegs: document.querySelectorAll(".daily-seg[data-seg]"),
             };
         },
 
@@ -127,10 +130,23 @@
         clearTile(row, col) {
             const tile = this.getTile(row, col);
             if (!tile) return;
-            tile.textContent = "";
-            tile.classList.remove("is-filled", "is-correct", "is-present", "is-absent", "is-revealing");
-            tile.removeAttribute("data-state");
-            tile.setAttribute("aria-label", `Row ${row + 1}, Letter ${col + 1}`);
+
+            // Brief remove animation only if tile had a letter (backspace UX)
+            if (tile.textContent && tile.textContent.trim()) {
+                tile.classList.add("is-removing");
+                setTimeout(() => {
+                    tile.classList.remove("is-removing");
+                    tile.textContent = "";
+                    tile.classList.remove("is-filled", "is-correct", "is-present", "is-absent", "is-revealing");
+                    tile.removeAttribute("data-state");
+                    tile.setAttribute("aria-label", `Row ${row + 1}, Letter ${col + 1}`);
+                }, 100);
+            } else {
+                tile.textContent = "";
+                tile.classList.remove("is-filled", "is-correct", "is-present", "is-absent", "is-revealing");
+                tile.removeAttribute("data-state");
+                tile.setAttribute("aria-label", `Row ${row + 1}, Letter ${col + 1}`);
+            }
         },
 
         /**
@@ -522,14 +538,17 @@
                 if (status === "WON") {
                     this.updateStatusBadge("won", "Won");
                     this.setActiveRow(-1);
+                    this.updateAttemptPips(attempts, maxAttempts, "won");
                     this.showCompletedState(gameState, true);
                 } else if (status === "LOST") {
                     this.updateStatusBadge("lost", "Lost");
                     this.setActiveRow(-1);
+                    this.updateAttemptPips(attempts, maxAttempts, "lost");
                     this.showCompletedState(gameState, false);
                 } else {
                     // IN_PROGRESS: activate next row and re-enable typing
                     this.updateStatusBadge("in-progress", "In Progress");
+                    this.updateAttemptPips(attempts, maxAttempts, "in-progress");
                     if (attempts < maxAttempts) {
                         this.setActiveRow(attempts);
                     } else {
@@ -587,14 +606,17 @@
             if (status === "WON") {
                 this.updateStatusBadge("won", "Won");
                 this.setActiveRow(-1);
+                this.updateAttemptPips(attempts, maxAttempts, "won");
                 this.showCompletedState(gameState, true);
             } else if (status === "LOST") {
                 this.updateStatusBadge("lost", "Lost");
                 this.setActiveRow(-1);
+                this.updateAttemptPips(attempts, maxAttempts, "lost");
                 this.showCompletedState(gameState, false);
             } else {
                 // IN_PROGRESS
                 this.updateStatusBadge("in-progress", "In Progress");
+                this.updateAttemptPips(attempts, maxAttempts, "in-progress");
                 if (attempts < maxAttempts) {
                     this.setActiveRow(attempts);
                 } else {
@@ -616,6 +638,8 @@
                 el.classList.add("is-error");
             } else if (type === "loading") {
                 el.classList.add("is-loading");
+            } else if (type === "success") {
+                el.classList.add("is-success");
             } else {
                 el.classList.add("is-info");
             }
@@ -623,7 +647,7 @@
             if (type === "loading") {
                 el.innerHTML = '<span class="feedback-spinner" aria-hidden="true"></span><span class="feedback-text" id="feedback-text">' + (message || "Checking guess...") + '</span>';
             } else {
-                el.innerHTML = '<span class="feedback-text" id="feedback-text">' + (message || "") + '</span>';
+                el.innerHTML = '<span class="feedback-icon" aria-hidden="true"></span><span class="feedback-text" id="feedback-text">' + (message || "") + '</span>';
             }
             this.elements.feedbackText = document.getElementById("feedback-text");
             el.classList.remove("is-hidden");
@@ -964,6 +988,13 @@
                     row.removeAttribute("aria-current");
                 });
             }
+            // Clear board game-state classes
+            if (this.elements.gameBoard) {
+                this.elements.gameBoard.classList.remove("board-won", "board-lost");
+            }
+            if (this.elements.gameStage) {
+                this.elements.gameStage.classList.remove("board-won");
+            }
             if (this.elements.completionTargetWrapper) {
                 this.elements.completionTargetWrapper.classList.add("is-hidden");
             }
@@ -1045,10 +1076,12 @@
             if (status === "WON") {
                 this.updateStatusBadge("won", "Won");
                 this.setActiveRow(-1);
+                this.updateAttemptPips(attempts, maxAttempts, "won");
                 this.showCompletedState(gameState, true);
             } else if (status === "LOST") {
                 this.updateStatusBadge("lost", "Lost");
                 this.setActiveRow(-1);
+                this.updateAttemptPips(attempts, maxAttempts, "lost");
                 this.showCompletedState(gameState, false);
             } else {
                 // IN_PROGRESS
@@ -1057,6 +1090,12 @@
                     this.setActiveRow(attempts);
                 } else {
                     this.setActiveRow(-1);
+                }
+                this.updateAttemptPips(attempts, maxAttempts, "in-progress");
+                // Board entrance animation for fresh active game
+                if (this.elements.gameStage && guesses.length === 0) {
+                    this.elements.gameStage.classList.add("is-entering");
+                    setTimeout(() => { if (this.elements.gameStage) this.elements.gameStage.classList.remove("is-entering"); }, 700);
                 }
                 this.showState(null); // Hide all banners, board is primary focus
             }
@@ -1074,6 +1113,7 @@
                 panel.classList.remove("is-won", "is-lost");
                 panel.classList.add(isWin ? "is-won" : "is-lost");
             }
+
 
             if (this.elements.completionIcon) {
                 // WON: clean emerald check (&#10003;), LOST: clean subtle marker (&#10005;)
@@ -1132,6 +1172,16 @@
             }
 
             this.showState("completed");
+
+            // Board ambient glow treatment (win = emerald, loss = cool dim)
+            if (this.elements.gameBoard) {
+                this.elements.gameBoard.classList.remove("board-won", "board-lost");
+                this.elements.gameBoard.classList.add(isWin ? "board-won" : "board-lost");
+            }
+            if (this.elements.gameStage) {
+                this.elements.gameStage.classList.remove("board-won");
+                if (isWin) { this.elements.gameStage.classList.add("board-won"); }
+            }
 
             // Keyboard accessibility: focus Play Again button if enabled, or fallback to completion panel
             if (playAgainBtn && !playAgainBtn.disabled && typeof playAgainBtn.focus === "function") {
@@ -1252,6 +1302,51 @@
             } else {
                 badge.textContent = label || "Ready";
             }
+        },
+
+        /**
+         * Update the 5 attempt pip indicators in the HUD
+         * @param {number} attempts — guesses used so far
+         * @param {number} maxAttempts — always 5
+         * @param {"in-progress"|"won"|"lost"|"ready"} status
+         */
+        updateAttemptPips(attempts, maxAttempts, status = "in-progress") {
+            const pips = this.elements.attemptPips;
+            if (!pips || pips.length === 0) {
+                // Re-query if not cached yet (e.g., late call)
+                this.elements.attemptPips = document.querySelectorAll(".attempt-pip");
+            }
+            const pipEls = this.elements.attemptPips;
+            if (!pipEls) return;
+            pipEls.forEach((pip, idx) => {
+                const pipNum = idx + 1; // pips are 1-indexed via data-pip
+                pip.classList.remove("is-done", "is-active", "is-won", "is-lost");
+                if (status === "won") {
+                    if (pipNum <= attempts) pip.classList.add("is-won");
+                } else if (status === "lost") {
+                    if (pipNum <= attempts) pip.classList.add("is-lost");
+                } else {
+                    // in-progress or ready
+                    if (pipNum < attempts + 1) pip.classList.add("is-done");
+                    else if (pipNum === attempts + 1) pip.classList.add("is-active");
+                }
+            });
+        },
+
+        /**
+         * Update the daily segmented meter in the HUD
+         * @param {number} gamesUsed — number of games played today
+         */
+        updateDailySegs(gamesUsed) {
+            const segs = document.querySelectorAll(".daily-seg[data-seg]");
+            segs.forEach(seg => {
+                const segNum = parseInt(seg.dataset.seg, 10);
+                if (segNum <= gamesUsed) {
+                    seg.classList.add("is-used");
+                } else {
+                    seg.classList.remove("is-used");
+                }
+            });
         }
     };
 

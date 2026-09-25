@@ -1,31 +1,109 @@
 /* ============================================================================
-   Guess the Word • Player Game Page Visual Foundation (Phase 4B-1)
+   Guess the Word - Premium Gaming UI (Phase Redesign)
+   Visual-only redesign. All game logic, IDs, classes, and JS remain unchanged.
    ============================================================================ */
 
+/* ============================================================================
+   Design Token System
+   ============================================================================ */
 :root {
     --stage-max-width: 350px;
     --controls-max-width: 500px;
     --game-container-max-width: 520px;
-    --color-tile-empty: rgba(15, 23, 42, 0.7);
-    --color-tile-border: #334155;
-    --color-tile-border-filled: #64748b;
-    --color-tile-bg-filled: rgba(30, 41, 59, 0.65);
-    
-    /* Wordle-style evaluation states */
-    --color-tile-correct: #15803d;
-    --color-tile-correct-border: #16a34a;
-    --color-tile-present: #b45309;
-    --color-tile-present-border: #d97706;
-    --color-tile-absent: #334155;
-    --color-tile-absent-border: #334155;
-    --color-tile-absent-text: #94a3b8;
 
-    --color-badge-bg: rgba(56, 189, 248, 0.12);
-    --color-badge-text: #38bdf8;
-    --color-badge-active: #22c55e;
-    --color-badge-active-bg: rgba(34, 197, 94, 0.12);
-    --color-badge-lost: #ef4444;
-    --color-badge-lost-bg: rgba(239, 68, 68, 0.12);
+    --bg-deep:     #06080f;
+    --bg-surface:  #111827;
+    --bg-card:     rgba(17, 24, 39, 0.85);
+
+    --accent:       #22d3ee;
+    --accent-dim:   rgba(34, 211, 238, 0.18);
+    --accent-glow:  rgba(34, 211, 238, 0.35);
+
+    --violet:     #818cf8;
+    --violet-dim: rgba(129, 140, 248, 0.15);
+
+    --color-tile-empty:          rgba(11, 15, 26, 0.75);
+    --color-tile-border:         rgba(51, 65, 85, 0.6);
+    --color-tile-border-filled:  rgba(99, 102, 241, 0.55);
+    --color-tile-bg-filled:      rgba(99, 102, 241, 0.12);
+
+    --color-tile-correct:        #059669;
+    --color-tile-correct-border: #10b981;
+    --color-tile-correct-glow:   rgba(16, 185, 129, 0.28);
+
+    --color-tile-present:        #b45309;
+    --color-tile-present-border: #d97706;
+    --color-tile-present-glow:   rgba(217, 119, 6, 0.25);
+
+    --color-tile-absent:         #1e293b;
+    --color-tile-absent-border:  #334155;
+    --color-tile-absent-text:    #64748b;
+
+    --color-badge-bg:        rgba(34, 211, 238, 0.1);
+    --color-badge-text:      #22d3ee;
+    --color-badge-active:    #34d399;
+    --color-badge-active-bg: rgba(52, 211, 153, 0.1);
+    --color-badge-lost:      #f87171;
+    --color-badge-lost-bg:   rgba(248, 113, 113, 0.1);
+
+    --text-primary:   #f0f6ff;
+    --text-secondary: #64748b;
+    --text-muted:     #3b4a66;
+
+    --border-color:  rgba(51, 65, 85, 0.55);
+
+    --shadow-tile: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+    --shadow-card: 0 8px 32px rgba(0,0,0,0.55);
+
+    --radius-tile: 6px;
+    --radius-card: 14px;
+    --radius-btn:  10px;
+    --radius-pill: 9999px;
+
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out:    cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   Atmospheric Animated Background (CSS only, zero extra DOM nodes)
+   ============================================================================ */
+
+body:has(.game-page-container) {
+    background: var(--bg-deep);
+    overflow-x: hidden;
+}
+
+body:has(.game-page-container)::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(34,211,238,0.055) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(129,140,248,0.045) 0%, transparent 60%),
+        linear-gradient(170deg, #08101e 0%, #06080f 60%, #0a0d18 100%);
+    pointer-events: none;
+}
+
+body:has(.game-page-container)::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(circle 420px at 15% 15%, rgba(34,211,238,0.06) 0%, transparent 70%),
+        radial-gradient(circle 350px at 85% 75%, rgba(129,140,248,0.055) 0%, transparent 70%);
+    animation: ambientDrift 22s ease-in-out infinite alternate;
+    pointer-events: none;
+    will-change: transform;
+}
+
+@keyframes ambientDrift {
+    0%   { transform: translate(0,0) scale(1); }
+    33%  { transform: translate(18px,-12px) scale(1.03); }
+    66%  { transform: translate(-12px,20px) scale(0.97); }
+    100% { transform: translate(8px,8px) scale(1.01); }
 }
 
 /* ============================================================================
@@ -33,62 +111,61 @@
    ============================================================================ */
 
 .game-page-container {
+    position: relative;
+    z-index: 1;
     width: 100%;
     max-width: var(--game-container-max-width);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.25rem;
-    padding: 0.5rem 1rem 1.5rem;
+    gap: 1.1rem;
+    padding: 0.75rem 1rem 2rem;
 }
 
-/* Tabular numbers helper for clean status metrics */
-.tabular {
-    font-variant-numeric: tabular-nums;
-}
-
-/* Utility to toggle state visibility */
-.is-hidden {
-    display: none !important;
-}
+.tabular { font-variant-numeric: tabular-nums; }
+.is-hidden { display: none !important; }
 
 /* ============================================================================
-   Compact Game Header
+   Game Header
    ============================================================================ */
 
 .game-header {
     width: 100%;
     text-align: center;
-    padding: 0.25rem 0;
+    padding: 0.5rem 0 0.1rem;
 }
 
 .header-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.25rem;
 }
 
 .game-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     margin: 0;
+    background: linear-gradient(135deg, #e0f2fe 0%, #22d3ee 45%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    /* No filter here — gradient text + filter causes blur in Safari/Chrome */
 }
 
 .game-subtitle {
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin: 0;
 }
 
 /* ============================================================================
-   Game Meta / Status Bar
+   Status Bar / Meta Row
    ============================================================================ */
 
 .game-meta {
@@ -96,44 +173,47 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.6);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 0.6rem 1.25rem;
-    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 0.65rem 1.25rem;
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .meta-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.15rem;
+    gap: 0.1rem;
 }
 
 .meta-label {
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-size: 0.65rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-secondary);
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
 }
 
 .meta-value {
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: 0.9rem;
+    font-weight: 800;
     color: var(--text-primary);
+    letter-spacing: 0.01em;
 }
 
 .status-badge {
     display: inline-block;
-    padding: 0.15rem 0.6rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     background: var(--color-badge-bg);
     color: var(--color-badge-text);
-    border: 1px solid rgba(56, 189, 248, 0.25);
+    border: 1px solid rgba(34,211,238,0.22);
     text-transform: uppercase;
 }
 
@@ -141,232 +221,503 @@
 .status-badge.won {
     background: var(--color-badge-active-bg);
     color: var(--color-badge-active);
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: rgba(52,211,153,0.28);
 }
 
 .status-badge.lost {
     background: var(--color-badge-lost-bg);
     color: var(--color-badge-lost);
-    border-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(248,113,113,0.25);
 }
 
 /* ============================================================================
-   State Panels & Notifications
+   HUD — Attempt Pip Indicators
    ============================================================================ */
 
-.game-state-container {
-    width: 100%;
+.hud-attempts { min-width: 72px; }
+.hud-status   { min-width: 80px; }
+.hud-daily    { min-width: 72px; align-items: center; }
+
+.attempt-pips {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin: 0.2rem 0 0.15rem;
 }
 
-.state-panel {
-    border-radius: 10px;
-    padding: 0.85rem 1.25rem;
-    text-align: center;
-    font-size: 0.875rem;
-    line-height: 1.4;
-    transition: opacity 0.2s ease;
+.attempt-pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(51,65,85,0.7);
+    background: rgba(11,15,26,0.6);
+    transition: background 0.2s var(--ease-smooth), border-color 0.2s var(--ease-smooth), box-shadow 0.2s var(--ease-smooth);
 }
+
+.attempt-pip.is-done {
+    background: rgba(99,102,241,0.55);
+    border-color: rgba(99,102,241,0.8);
+}
+
+.attempt-pip.is-active {
+    background: var(--accent);
+    border-color: #67e8f9;
+    box-shadow: 0 0 6px rgba(34,211,238,0.5);
+    animation: pipPulse 1.8s ease-in-out infinite;
+}
+
+.attempt-pip.is-won {
+    background: #34d399;
+    border-color: #6ee7b7;
+    box-shadow: 0 0 5px rgba(52,211,153,0.4);
+}
+
+.attempt-pip.is-lost {
+    background: rgba(248,113,113,0.4);
+    border-color: rgba(248,113,113,0.6);
+}
+
+@keyframes pipPulse {
+    0%,100% { box-shadow: 0 0 4px rgba(34,211,238,0.4); }
+    50%      { box-shadow: 0 0 9px rgba(34,211,238,0.7); }
+}
+
+/* ── Daily segmented meter ── */
+
+.daily-segs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    margin: 0.2rem 0 0.15rem;
+}
+
+.daily-seg {
+    width: 18px;
+    height: 7px;
+    border-radius: 3px;
+    background: rgba(11,15,26,0.6);
+    border: 1px solid rgba(51,65,85,0.6);
+    transition: background 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth);
+}
+
+.daily-seg.is-used {
+    background: linear-gradient(90deg, #0891b2, #22d3ee);
+    border-color: rgba(34,211,238,0.5);
+    box-shadow: 0 0 5px rgba(34,211,238,0.25);
+}
+
+/* ============================================================================
+   State-Ready: Intentional Empty State
+   ============================================================================ */
 
 .state-ready {
-    background: rgba(30, 41, 59, 0.6);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.9rem;
+    padding: 1.25rem 1.25rem 1.1rem;
+    animation: panelFadeIn 0.4s var(--ease-out) both;
+}
+
+@keyframes panelFadeIn {
+    0%   { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.ready-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
 }
 
 .state-message {
     color: var(--text-secondary);
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    max-width: 340px;
 }
 
-.btn-game-action {
-    min-height: 44px;
-    padding: 0.6rem 1.5rem;
-    font-size: 0.9rem;
+/* Color-key hint */
+.rules-hint {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 0.72rem;
     font-weight: 600;
+    color: var(--text-muted);
     letter-spacing: 0.02em;
-    border-radius: 8px;
+}
+
+.rules-hint li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.hint-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.swatch-correct { background: var(--color-tile-correct); }
+.swatch-present { background: var(--color-tile-present); }
+.swatch-absent  { background: var(--color-tile-absent-border); border: 1px solid rgba(51,65,85,0.8); }
+
+/* ============================================================================
+   State-Limit: Session Complete Card
+   ============================================================================ */
+
+.state-limit {
+    background: linear-gradient(160deg, rgba(245,158,11,0.07) 0%, rgba(17,24,39,0.88) 100%);
+    border: 1px solid rgba(245,158,11,0.28);
+    color: #fcd34d;
+    border-radius: var(--radius-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1.25rem 1.25rem 1rem;
+    text-align: center;
+    animation: panelFadeIn 0.4s var(--ease-out) both;
+}
+
+.limit-icon {
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    color: rgba(245,158,11,0.7);
+    margin-bottom: 0.1rem;
+    line-height: 1;
+}
+
+.limit-tag {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.1rem;
+    color: #fcd34d;
+}
+
+.limit-message {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #fef3c7;
+    max-width: 300px;
+    line-height: 1.5;
+}
+
+.limit-segs {
+    display: flex;
+    gap: 5px;
+    margin-top: 0.5rem;
+}
+
+.limit-seg {
+    width: 28px;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(245,158,11,0.2);
+    border: 1px solid rgba(245,158,11,0.3);
+    transition: background 0.3s;
+}
+
+.limit-seg.is-full {
+    background: linear-gradient(90deg, #d97706, #f59e0b);
+    border-color: rgba(245,158,11,0.5);
+    box-shadow: 0 0 6px rgba(245,158,11,0.2);
+}
+
+/* ============================================================================
+   Buttons — Micro-interactions
+   ============================================================================ */
+
+
+.btn-game-action {
+    position: relative;
+    min-height: 44px;
+    padding: 0.65rem 1.8rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    border-radius: var(--radius-btn);
     cursor: pointer;
     border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    gap: 0.4rem;
+    background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+    color: #051c26;
+    box-shadow:
+        0 4px 15px rgba(34,211,238,0.32),
+        0 1px 3px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        inset 0 -1px 0 rgba(0,0,0,0.12);
+    transition:
+        transform 0.15s var(--ease-spring),
+        box-shadow 0.15s var(--ease-smooth),
+        background 0.15s var(--ease-smooth);
+    /* No idle animation by default — only primary CTA pulses */
+    overflow: hidden;
+}
+
+/* Only the primary Start Game button idles with a subtle pulse */
+#action-start-game:not(:disabled):not(.is-loading) {
+    animation: btnPulse 4s ease-in-out infinite;
+}
+
+.btn-game-action::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.12) 50%, transparent 65%);
+    transform: translateX(-100%);
+    transition: transform 0.5s var(--ease-smooth);
+    border-radius: inherit;
+}
+
+.btn-game-action:hover::after { transform: translateX(100%); }
+
+@keyframes btnPulse {
+    0%,100% { box-shadow: 0 4px 15px rgba(34,211,238,0.32), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15); }
+    50%      { box-shadow: 0 4px 22px rgba(34,211,238,0.52), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15); }
 }
 
 .btn-game-action:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: 0 8px 28px rgba(34,211,238,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.1);
+    animation: none;
 }
 
 .btn-game-action:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(56, 189, 248, 0.25);
+    transform: translateY(1px) scale(0.985);
+    box-shadow: 0 2px 10px rgba(34,211,238,0.28), 0 1px 2px rgba(0,0,0,0.35), inset 0 2px 4px rgba(0,0,0,0.15);
+    animation: none;
 }
 
 .btn-game-action:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 0 3px rgba(34,211,238,0.55), 0 4px 15px rgba(34,211,238,0.35);
+    animation: none;
 }
 
 .btn-game-action:disabled,
 .btn-game-action.is-loading {
-    opacity: 0.65;
+    opacity: 0.5;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+    animation: none;
 }
 
 .btn-spinner-sm {
     display: inline-block;
     width: 0.85rem;
     height: 0.85rem;
-    border: 2px solid rgba(15, 23, 42, 0.3);
-    border-top-color: #0f172a;
+    border: 2px solid rgba(5,28,38,0.3);
+    border-top-color: #051c26;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
     vertical-align: -0.1rem;
-    margin-right: 0.35rem;
+    margin-right: 0.25rem;
 }
+
+/* ============================================================================
+   Completion Panel
+   ============================================================================ */
 
 .state-completed {
-    background: rgba(30, 41, 59, 0.85);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    padding: 1.25rem;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: border-color 0.25s ease, background 0.25s ease;
+    padding: 1.4rem 1.25rem;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: border-color 0.3s var(--ease-smooth), background 0.3s var(--ease-smooth);
+    /* Refined entrance — ease-out feels more premium than spring for a panel */
+    animation: panelRise 0.42s var(--ease-out) both;
+    transform-origin: center top;
 }
 
-/* WON Visual Treatment: Polished Emerald Accent & Check Icon */
+@keyframes panelRise {
+    0%   { opacity: 0; transform: translateY(-12px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Icon badge pops in after panel settles */
+.state-completed .completion-icon {
+    animation: iconPop 0.38s var(--ease-spring) 0.22s both;
+}
+
+@keyframes iconPop {
+    0%   { transform: scale(0); opacity: 0; }
+    60%  { transform: scale(1.25); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Target word card slides in */
+.state-completed .completion-target-card {
+    animation: targetSlideIn 0.35s var(--ease-out) 0.38s both;
+}
+
+@keyframes targetSlideIn {
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Action buttons settle in last */
+.state-completed .completion-actions {
+    animation: actionsSettle 0.3s var(--ease-out) 0.5s both;
+}
+
+@keyframes actionsSettle {
+    0%   { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
 .state-completed.is-won {
-    border-color: rgba(34, 197, 94, 0.4);
-    background: linear-gradient(180deg, rgba(34, 197, 94, 0.09) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border-color: rgba(16,185,129,0.40);
+    background: linear-gradient(160deg, rgba(16,185,129,0.09) 0%, rgba(6,185,129,0.03) 40%, rgba(17,24,39,0.92) 100%);
+    box-shadow: var(--shadow-card), 0 0 0 1px rgba(16,185,129,0.15), inset 0 1px 0 rgba(52,211,153,0.06);
 }
 
 .state-completed.is-won .completion-icon {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.15);
-    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #34d399;
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.3);
+    box-shadow: 0 0 16px rgba(16,185,129,0.28);
+}
+
+.state-completed.is-won .completion-title {
+    color: #a7f3d0;
 }
 
 .state-completed.is-won .completion-target {
-    color: #4ade80;
-    text-shadow: 0 0 12px rgba(74, 222, 128, 0.25);
+    color: #6ee7b7;
+    text-shadow: 0 0 18px rgba(52,211,153,0.38);
 }
 
-/* LOST Visual Treatment: Muted Rose / Slate Design */
 .state-completed.is-lost {
-    border-color: rgba(225, 29, 72, 0.25);
-    background: linear-gradient(180deg, rgba(225, 29, 72, 0.05) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border-color: rgba(244,63,94,0.22);
+    background: linear-gradient(170deg, rgba(244,63,94,0.05) 0%, rgba(17,24,39,0.9) 100%);
 }
 
 .state-completed.is-lost .completion-icon {
     color: #fb7185;
-    background: rgba(225, 29, 72, 0.12);
-    border: 1px solid rgba(225, 29, 72, 0.25);
+    background: rgba(244,63,94,0.1);
+    border: 1px solid rgba(244,63,94,0.22);
 }
 
 .state-completed.is-lost .completion-target {
-    color: #38bdf8;
-    text-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    color: var(--accent);
+    text-shadow: 0 0 14px rgba(34,211,238,0.3);
 }
 
 .completion-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
 }
 
 .completion-icon {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 800;
     margin-bottom: 0.25rem;
 }
 
 .completion-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: var(--text-primary);
     margin: 0;
 }
 
 .completion-message {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: var(--text-secondary);
     margin: 0;
-    max-width: 380px;
-    line-height: 1.45;
+    max-width: 340px;
+    line-height: 1.5;
 }
 
 .completion-meta-row {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    margin: 0.65rem 0 0.5rem;
-    font-size: 0.85rem;
+    gap: 0.45rem;
+    margin: 0.75rem 0 0.5rem;
+    font-size: 0.825rem;
     color: var(--text-secondary);
 }
 
 .completion-meta-row .meta-item-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: var(--text-muted);
 }
 
 .completion-attempts {
     font-size: 0.95rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text-primary);
 }
 
-/* Prominent Secret Word Reveal Card */
 .completion-target-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
-    margin: 0.75rem auto;
-    padding: 0.55rem 1.25rem;
-    background: rgba(15, 23, 42, 0.75);
+    gap: 0.25rem;
+    margin: 0.8rem auto;
+    padding: 0.6rem 1.4rem;
+    background: rgba(6,8,15,0.65);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 10px;
     width: fit-content;
     max-width: 100%;
 }
 
 .target-card-label {
-    font-size: 0.68rem;
-    font-weight: 600;
+    font-size: 0.62rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
 }
 
 .completion-target {
-    font-size: 1.35rem;
-    font-weight: 800;
-    letter-spacing: 0.16em;
+    font-size: 1.45rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--accent-color);
+    color: var(--accent);
 }
 
-/* Backward compatibility for previous wrapper class if referenced */
 .completion-target-wrapper {
     margin-top: 0.6rem;
     font-size: 0.95rem;
@@ -376,54 +727,48 @@
 .completion-actions {
     display: flex;
     justify-content: center;
-    margin-top: 0.9rem;
+    margin-top: 1rem;
 }
 
-.btn-play-again {
-    min-width: 140px;
-}
+.btn-play-again { min-width: 148px; }
 
 .completion-feedback {
-    margin-top: 0.75rem;
-    padding: 0.5rem 0.85rem;
+    margin-top: 0.85rem;
+    padding: 0.55rem 0.9rem;
     border-radius: 8px;
-    font-size: 0.825rem;
-    line-height: 1.4;
+    font-size: 0.8rem;
+    line-height: 1.45;
     text-align: center;
 }
 
 .completion-feedback.is-limit {
-    background: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.35);
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
     color: #fcd34d;
 }
 
 .completion-feedback.is-error {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.28);
     color: #fca5a5;
 }
 
-.state-limit {
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #fcd34d;
+/* ============================================================================
+   Other State Panels (loading, error)
+   ============================================================================ */
+
+.game-state-container { width: 100%; }
+
+.state-panel {
+    border-radius: var(--radius-card);
+    padding: 1rem 1.25rem;
+    text-align: center;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    transition: opacity 0.25s var(--ease-smooth);
 }
 
-.limit-tag {
-    display: inline-block;
-    font-weight: 700;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
-}
-
-.limit-message {
-    margin: 0;
-    font-size: 0.85rem;
-    color: #fef3c7;
-}
+/* ── State-Limit moved above, loading/error remain ── */
 
 .state-loading {
     display: flex;
@@ -431,57 +776,77 @@
     justify-content: center;
     gap: 0.75rem;
     color: var(--text-secondary);
-    background: rgba(30, 41, 59, 0.5);
+    background: rgba(17,24,39,0.6);
     border: 1px dashed var(--border-color);
+    border-radius: var(--radius-card);
+    font-size: 0.875rem;
 }
 
 .spinner {
     width: 18px;
     height: 18px;
     border: 2px solid var(--border-color);
-    border-top-color: var(--accent-color);
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .state-error {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.28);
     color: #fca5a5;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
+    border-radius: var(--radius-card);
 }
 
 .error-icon {
-    font-weight: bold;
+    font-weight: 800;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #ef4444;
-    color: #ffffff;
-    font-size: 0.75rem;
+    color: #fff;
+    font-size: 0.72rem;
     flex-shrink: 0;
 }
 
 /* ============================================================================
-   Main Game Board (5x5 Guess Grid Foundation)
+   Main Game Stage & Board - Visual centerpiece
    ============================================================================ */
 
 .game-stage {
+    position: relative;
     width: 100%;
     max-width: var(--stage-max-width);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0.25rem 0;
+    margin: 0.6rem 0 0.5rem;
+}
+
+/* Ambient board glow via pseudo-element — GPU-composited, no filter on main element */
+.game-stage::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: calc(var(--radius-tile) + 12px);
+    background: radial-gradient(ellipse 100% 80% at 50% 50%, rgba(34,211,238,0.06) 0%, transparent 70%);
+    opacity: 0.6;
+    animation: stageGlow 6s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes stageGlow {
+    0%   { opacity: 0.4; transform: scale(0.98); }
+    100% { opacity: 0.8; transform: scale(1.02); }
 }
 
 .game-board {
@@ -499,19 +864,43 @@
     grid-template-columns: repeat(5, 1fr);
     gap: clamp(5px, 1.5vw, 8px);
     width: 100%;
-    perspective: 1000px;
+    perspective: 800px;
+    transition: transform 0.12s var(--ease-smooth), box-shadow 0.12s var(--ease-smooth);
 }
 
-/* Active row indicator for current unsubmitted attempt */
+/* ── Active row: focused indigo outline breathing ── */
+.board-row.is-active {
+    animation: activeRowPulse 3.5s ease-in-out infinite;
+    border-radius: calc(var(--radius-tile) + 3px);
+}
+
 .board-row.is-active .board-tile {
-    border-color: rgba(148, 163, 184, 0.5);
+    border-color: rgba(99, 102, 241, 0.38);
+    box-shadow: var(--shadow-tile), 0 0 0 1px rgba(99,102,241,0.08);
 }
 
-/* Filled / typed tiles in active row override with crisp filled border */
 .board-row.is-active .board-tile.is-filled {
     border-color: var(--color-tile-border-filled);
+    box-shadow: var(--shadow-tile), 0 0 0 1px rgba(99,102,241,0.22), 0 0 10px rgba(99,102,241,0.12);
 }
 
+@keyframes activeRowPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    50%       { box-shadow: 0 0 12px 2px rgba(99,102,241,0.14); }
+}
+
+/* ── Submission anticipation: row compresses then rises ── */
+.board-row.is-submitting {
+    animation: rowAnticipate 0.22s var(--ease-smooth) forwards;
+}
+
+@keyframes rowAnticipate {
+    0%   { transform: scaleY(1) translateY(0); }
+    40%  { transform: scaleY(0.95) translateY(1px); }
+    100% { transform: scaleY(1) translateY(-1px); }
+}
+
+/* Dimensional tile with subtle inner surface lighting */
 .board-tile {
     aspect-ratio: 1;
     width: 100%;
@@ -520,92 +909,216 @@
     justify-content: center;
     background: var(--color-tile-empty);
     border: 2px solid var(--color-tile-border);
-    border-radius: 4px;
+    border-radius: var(--radius-tile);
     color: var(--text-primary);
-    font-size: clamp(1.25rem, 4.5vw, 1.85rem);
-    font-weight: 700;
+    font-size: clamp(1.3rem, 4.5vw, 1.9rem);
+    font-weight: 800;
     line-height: 1;
     text-transform: uppercase;
     user-select: none;
     box-sizing: border-box;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    box-shadow: var(--shadow-tile);
+    position: relative;
+    will-change: transform;
+    transition:
+        border-color 0.15s var(--ease-smooth),
+        background-color 0.15s var(--ease-smooth),
+        color 0.15s var(--ease-smooth),
+        box-shadow 0.15s var(--ease-smooth);
+    /* Note: transform NOT in transition — animated tiles use keyframes instead */
 }
 
-/* Filled / Typed state before submission */
+.board-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: calc(var(--radius-tile) - 2px);
+    /* Subtle top-edge surface catch light */
+    background: linear-gradient(170deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.01) 40%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+}
+
 .board-tile.is-filled {
     border-color: var(--color-tile-border-filled);
     background: var(--color-tile-bg-filled);
-    animation: tilePopIn 0.1s ease-out;
+    box-shadow: var(--shadow-tile), 0 0 0 1px rgba(99,102,241,0.18);
+    animation: tilePopIn 0.16s var(--ease-spring);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
-/* Correct state: letter and position match target */
 .board-tile.is-correct {
     background: var(--color-tile-correct);
     border-color: var(--color-tile-correct-border);
-    color: #ffffff;
+    color: #ecfdf5;
+    box-shadow: 0 2px 10px var(--color-tile-correct-glow), var(--shadow-tile);
 }
 
-/* Present state: letter in target, incorrect position */
 .board-tile.is-present {
     background: var(--color-tile-present);
     border-color: var(--color-tile-present-border);
-    color: #ffffff;
+    color: #fffbeb;
+    box-shadow: 0 2px 10px var(--color-tile-present-glow), var(--shadow-tile);
 }
 
-/* Absent state: letter does not occur in target */
 .board-tile.is-absent {
     background: var(--color-tile-absent);
     border-color: var(--color-tile-absent-border);
     color: var(--color-tile-absent-text);
 }
 
-/* Subtle Pop-in animation when letter entered */
-@keyframes tilePopIn {
-    0% {
-        transform: scale(0.92);
-    }
-    50% {
-        transform: scale(1.04);
-    }
-    100% {
-        transform: scale(1);
-    }
+.board-row.is-submitting .board-tile {
+    opacity: 0.82;
+    filter: brightness(1.05);
 }
 
-/* Flip reveal animation for submitted guess row (Phase 4B-4A) */
+/* ── Tile enter: physical keystroke feel — quick spring ── */
+@keyframes tilePopIn {
+    0%   { transform: scale(0.82) translateY(3px); opacity: 0.6; }
+    55%  { transform: scale(1.07) translateY(-1px); opacity: 1; }
+    82%  { transform: scale(0.98) translateY(0); }
+    100% { transform: scale(1) translateY(0); }
+}
+
+/* ── Tile remove: fast shrink + fade ── */
+.board-tile.is-removing {
+    animation: tileRemove 0.1s var(--ease-smooth) forwards;
+}
+
+@keyframes tileRemove {
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.7); opacity: 0; }
+}
+
+/* ── 3D flip reveal: enhanced with post-land micro-bounce ── */
 .board-tile.is-revealing {
-    animation: tileFlip 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: tileFlip 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes tileFlip {
-    0% {
-        transform: rotateX(0deg);
-    }
-    49.9% {
-        transform: rotateX(90deg);
-    }
-    50% {
-        transform: rotateX(90deg);
-    }
-    100% {
-        transform: rotateX(0deg);
-    }
+    0%    { transform: rotateX(0deg) scale(1); }
+    45%   { transform: rotateX(90deg) scale(1); }
+    50%   { transform: rotateX(90deg) scale(1); }
+    75%   { transform: rotateX(0deg) scale(1.04); }
+    88%   { transform: rotateX(0deg) scale(0.97); }
+    100%  { transform: rotateX(0deg) scale(1); }
+}
+
+/* ── Correct tile: emerald bloom on arrival ── */
+.board-tile.is-correct:not(.is-revealing) {
+    animation: tileBloomCorrect 0.35s var(--ease-out) both;
+}
+
+@keyframes tileBloomCorrect {
+    0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0), var(--shadow-tile); }
+    40%  { box-shadow: 0 0 0 6px rgba(16,185,129,0.22), var(--shadow-tile); }
+    100% { box-shadow: 0 2px 10px var(--color-tile-correct-glow), var(--shadow-tile); }
+}
+
+/* ── Present tile: warm amber bloom ── */
+.board-tile.is-present:not(.is-revealing) {
+    animation: tileBloomPresent 0.35s var(--ease-out) both;
+}
+
+@keyframes tileBloomPresent {
+    0%   { box-shadow: 0 0 0 0 rgba(217,119,6,0), var(--shadow-tile); }
+    40%  { box-shadow: 0 0 0 5px rgba(217,119,6,0.2), var(--shadow-tile); }
+    100% { box-shadow: 0 2px 10px var(--color-tile-present-glow), var(--shadow-tile); }
 }
 
 /* ============================================================================
-   Inline Guess Feedback (Phase 4B-3C)
+   Board Game-State Treatments (Win / Loss)
+   ============================================================================ */
+
+/* ── WIN: emerald radial glow emanating from the board ── */
+.game-board.board-won {
+    animation: boardWinGlow 1.2s var(--ease-out) forwards;
+}
+
+@keyframes boardWinGlow {
+    0%   { filter: drop-shadow(0 0 0px rgba(16,185,129,0)); }
+    35%  { filter: drop-shadow(0 0 28px rgba(16,185,129,0.45)); }
+    100% { filter: drop-shadow(0 0 14px rgba(16,185,129,0.22)); }
+}
+
+/* Winning tiles lift individually (staggered via nth-child) */
+.game-board.board-won .board-row:last-child .board-tile.is-correct {
+    animation: tileLiftWin 0.5s var(--ease-spring) 0.15s both;
+}
+
+@keyframes tileLiftWin {
+    0%   { transform: scale(1) translateY(0); }
+    55%  { transform: scale(1.12) translateY(-5px); }
+    100% { transform: scale(1) translateY(0); }
+}
+
+/* ── CSS sparkle particles (pseudo-elements on the board wrapper) ── */
+.game-stage.board-won::before,
+.game-stage.board-won::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: sparkle 0.9s var(--ease-out) 0.3s both;
+}
+
+.game-stage.board-won::before {
+    background: #34d399;
+    top: 15%;
+    left: 20%;
+}
+
+.game-stage.board-won::after {
+    background: #22d3ee;
+    top: 25%;
+    right: 22%;
+    animation-delay: 0.45s;
+}
+
+@keyframes sparkle {
+    0%   { transform: scale(0) translateY(0); opacity: 1; }
+    60%  { transform: scale(1.5) translateY(-18px); opacity: 0.9; }
+    100% { transform: scale(0.2) translateY(-32px); opacity: 0; }
+}
+
+/* ── LOSS: cool dim + restrained settling ── */
+.game-board.board-lost {
+    animation: boardLostSettle 0.8s var(--ease-smooth) forwards;
+}
+
+@keyframes boardLostSettle {
+    0%   { filter: drop-shadow(0 0 0px rgba(244,63,94,0)); opacity: 1; }
+    30%  { filter: drop-shadow(0 0 12px rgba(244,63,94,0.2)); opacity: 0.95; }
+    100% { filter: drop-shadow(0 0 4px rgba(244,63,94,0.08)); opacity: 0.88; }
+}
+
+/* Loss tiles gently settle downward */
+.game-board.board-lost .board-tile {
+    animation: tileLostSettle 0.45s var(--ease-smooth) both;
+}
+
+@keyframes tileLostSettle {
+    0%   { transform: translateY(0); }
+    50%  { transform: translateY(2px); }
+    100% { transform: translateY(0); }
+}
+
+/* ============================================================================
+   Inline Guess Feedback — Enhanced states with icon
    ============================================================================ */
 
 .guess-feedback {
     width: 100%;
     max-width: var(--stage-max-width);
     min-height: 2.25rem;
-    margin: 0.15rem auto 0.25rem;
-    padding: 0.4rem 0.85rem;
-    border-radius: 6px;
-    font-size: 0.825rem;
+    margin: 0.1rem auto 0.2rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
     font-weight: 600;
     text-align: center;
     letter-spacing: 0.02em;
@@ -613,7 +1126,11 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    transition: opacity 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    transition:
+        opacity 0.2s var(--ease-smooth),
+        border-color 0.2s var(--ease-smooth),
+        background-color 0.2s var(--ease-smooth),
+        transform 0.2s var(--ease-smooth);
     box-sizing: border-box;
     border: 1px solid transparent;
 }
@@ -625,42 +1142,98 @@
     pointer-events: none;
     border-color: transparent !important;
     background: transparent !important;
+    transform: none !important;
 }
 
 .guess-feedback.is-error {
-    background: rgba(239, 68, 68, 0.14);
-    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.32);
     color: #fca5a5;
+    animation: feedbackShake 0.3s var(--ease-smooth);
+}
+
+@keyframes feedbackShake {
+    0%,100% { transform: translateX(0); }
+    25%     { transform: translateX(-4px); }
+    75%     { transform: translateX(4px); }
 }
 
 .guess-feedback.is-info {
-    background: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    color: #38bdf8;
+    background: rgba(34,211,238,0.08);
+    border: 1px solid rgba(34,211,238,0.25);
+    color: var(--accent);
 }
 
 .guess-feedback.is-loading {
-    background: rgba(30, 41, 59, 0.7);
+    background: rgba(17,24,39,0.7);
     border: 1px dashed var(--border-color);
     color: var(--text-secondary);
 }
 
+.guess-feedback.is-success {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #6ee7b7;
+}
+
+/* Feedback icon — tiny CSS shapes via content on .feedback-icon */
+.feedback-icon {
+    display: none;
+    font-size: 0.75rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.guess-feedback.is-error   .feedback-icon::before { content: '✕'; display: inline; }
+.guess-feedback.is-success .feedback-icon::before { content: '✓'; display: inline; }
+.guess-feedback.is-info    .feedback-icon::before { content: '●'; display: inline; font-size: 0.5rem; }
+
+.guess-feedback.is-error   .feedback-icon,
+.guess-feedback.is-success .feedback-icon,
+.guess-feedback.is-info    .feedback-icon { display: inline; }
+
 .feedback-spinner {
     width: 12px;
     height: 12px;
-    border: 2px solid rgba(148, 163, 184, 0.3);
-    border-top-color: var(--accent-color);
+    border: 2px solid rgba(148,163,184,0.25);
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     display: inline-block;
 }
 
-.board-row.is-submitting .board-tile {
-    opacity: 0.85;
+/* ============================================================================
+   Game Start Entrance (board appears fresh on new game)
+   ============================================================================ */
+
+.game-stage.is-entering {
+    animation: boardEnter 0.55s var(--ease-spring) both;
+}
+
+@keyframes boardEnter {
+    0%   { opacity: 0; transform: scale(0.96) translateY(8px); }
+    60%  { opacity: 1; transform: scale(1.01) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Tiles stagger-enter only on fresh game start */
+.game-stage.is-entering .board-tile {
+    animation: tileEnterStagger 0.3s var(--ease-out) both;
+}
+
+.game-stage.is-entering .board-row:nth-child(1) .board-tile { animation-delay: calc(0.05s + var(--tile-delay, 0s)); }
+.game-stage.is-entering .board-row:nth-child(2) .board-tile { animation-delay: calc(0.10s + var(--tile-delay, 0s)); }
+.game-stage.is-entering .board-row:nth-child(3) .board-tile { animation-delay: calc(0.15s + var(--tile-delay, 0s)); }
+.game-stage.is-entering .board-row:nth-child(4) .board-tile { animation-delay: calc(0.20s + var(--tile-delay, 0s)); }
+.game-stage.is-entering .board-row:nth-child(5) .board-tile { animation-delay: calc(0.25s + var(--tile-delay, 0s)); }
+
+@keyframes tileEnterStagger {
+    0%   { opacity: 0; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 /* ============================================================================
-   Lower Interaction Stage (Controls / Keyboard Foundation)
+   Interaction Stage (physical keyboard only)
    ============================================================================ */
 
 .game-controls {
@@ -671,9 +1244,7 @@
     align-items: center;
 }
 
-.game-controls:empty {
-    display: none;
-}
+.game-controls:empty { display: none; }
 
 /* ============================================================================
    Responsive Adaptations
@@ -681,73 +1252,156 @@
 
 @media (max-width: 768px) {
     .game-page-container {
-        gap: 1rem;
-        padding: 0.5rem 0.75rem 1rem;
+        gap: 0.9rem;
+        padding: 0.5rem 0.85rem 1.5rem;
     }
 }
 
 @media (max-width: 480px) {
     .game-page-container {
         gap: 0.75rem;
-        padding: 0.25rem 0.5rem 1rem;
+        padding: 0.25rem 0.55rem 1.25rem;
     }
+    .game-title { font-size: 1.3rem; }
+    .game-meta { padding: 0.5rem 0.9rem; }
+    .meta-value { font-size: 0.82rem; }
+    .state-completed { padding: 1.1rem 0.9rem; }
+    .completion-title { font-size: 1.1rem; }
+    .completion-target { font-size: 1.25rem; letter-spacing: 0.15em; }
+    .completion-message { max-width: 100%; }
+    .btn-play-again { width: 100%; max-width: 280px; }
+    .btn-game-action { font-size: 0.875rem; padding: 0.65rem 1.4rem; }
+    /* HUD compact on mobile */
+    .attempt-pip { width: 9px; height: 9px; }
+    .daily-seg { width: 15px; height: 6px; }
+    .rules-hint { gap: 0.7rem; }
+}
 
-    .game-title {
-        font-size: 1.25rem;
+/* ─ 390px (mobile flagship) ─ */
+@media (max-width: 400px) {
+    :root {
+        --stage-max-width: 100%;
+        --game-container-max-width: 100%;
     }
-
+    .game-page-container { padding: 0.25rem 0.4rem 1rem; }
     .game-meta {
-        padding: 0.5rem 0.9rem;
+        padding: 0.4rem 0.55rem;
+        border-radius: 10px;
+        gap: 0;
     }
-
-    .meta-value {
-        font-size: 0.85rem;
-    }
-
-    .state-completed {
-        padding: 1rem 0.85rem;
-    }
-
-    .completion-title {
-        font-size: 1.1rem;
-    }
-
-    .completion-target {
-        font-size: 1.2rem;
-        letter-spacing: 0.12em;
-    }
-
-    .completion-message {
-        max-width: 100%;
-    }
-
-    .btn-play-again {
-        width: 100%;
-        max-width: 260px;
-    }
+    .meta-label { font-size: 0.56rem; }
+    .meta-value { font-size: 0.76rem; }
+    .attempt-pip { width: 8px; height: 8px; gap: 3px; }
+    .attempt-pips { gap: 3px; }
+    .daily-seg { width: 13px; height: 6px; }
+    .daily-segs { gap: 3px; }
+    .hud-attempts, .hud-daily { min-width: 60px; }
+    .hud-status { min-width: 68px; }
+    .rules-hint { gap: 0.55rem; font-size: 0.68rem; }
 }
 
-/* Respect reduced motion preferences */
+/* ============================================================================
+   Reduced Motion — disable decorative animations, keep functional ones
+   ============================================================================ */
+
 @media (prefers-reduced-motion: reduce) {
-    .spinner {
-        animation: none;
+    /* Stop all decorative motion */
+    body:has(.game-page-container)::after {
+        animation: none !important;
     }
-    .btn-game-action {
-        transition: none;
+
+    .game-stage::before {
+        animation: none !important;
+        opacity: 0 !important;
     }
-    .board-tile {
-        transition: none;
+
+    .game-stage.is-entering {
+        animation: none !important;
+        transform: none !important;
     }
+
+    .game-stage.is-entering .board-tile {
+        animation: none !important;
+        opacity: 1 !important;
+    }
+
+    .board-row.is-active {
+        animation: none !important;
+        box-shadow: none !important;
+    }
+
     .board-tile.is-filled {
-        animation: none;
+        animation: none !important;
     }
-    .board-tile.is-revealing {
-        animation: none;
+
+    .board-tile.is-removing {
+        animation: none !important;
     }
-    .feedback-spinner {
-        animation: none;
+
+    .attempt-pip {
+        animation: none !important;
     }
+
+    #action-start-game {
+        animation: none !important;
+    }
+
+    .btn-game-action {
+        animation: none !important;
+    }
+
+    .btn-game-action::after {
+        display: none !important;
+    }
+
+    .state-ready,
+    .state-limit {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .game-board.board-won,
+    .game-board.board-lost,
+    .game-stage.board-won::before,
+    .game-stage.board-won::after {
+        animation: none !important;
+        filter: none !important;
+    }
+
+    /* Keep functional transitions at reduced speed */
+    .board-tile {
+        transition: border-color 0.1s, background-color 0.1s, color 0.1s !important;
+    }
+
     .guess-feedback {
-        transition: none;
+        transition: opacity 0.1s !important;
+        animation: none !important;
+    }
+
+    /* Completion panel: instant appear, no motion */
+    .state-completed {
+        animation: none !important;
+        transform: none !important;
+    }
+
+    .state-completed .completion-icon,
+    .state-completed .completion-target-card,
+    .state-completed .completion-actions {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    /* Keep tile bloom off but restore final shadow state */
+    .board-tile.is-correct:not(.is-revealing),
+    .board-tile.is-present:not(.is-revealing) {
+        animation: none !important;
+    }
+
+    /* Preserve functional flip reveal */
+    .board-tile.is-revealing {
+        animation: tileFlip 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
     }
 }
+
