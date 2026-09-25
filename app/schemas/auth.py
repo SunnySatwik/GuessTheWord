@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.enums.role import UserRole
 
@@ -51,6 +51,7 @@ class UserRegisterSchema(BaseModel):
 
     username: str
     password: str
+    confirm_password: str | None = None
 
     @field_validator("username")
     @classmethod
@@ -67,6 +68,12 @@ class UserRegisterSchema(BaseModel):
         if not valid:
             raise ValueError(msg)
         return v
+
+    @model_validator(mode="after")
+    def check_passwords_match(self) -> "UserRegisterSchema":
+        if self.confirm_password is not None and self.password != self.confirm_password:
+            raise ValueError("Passwords do not match.")
+        return self
 
 
 class UserLoginSchema(BaseModel):

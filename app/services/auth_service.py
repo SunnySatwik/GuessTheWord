@@ -62,11 +62,15 @@ def register_user(
     username: str,
     password: str,
     role: UserRole = UserRole.PLAYER,
+    confirm_password: str | None = None,
 ) -> User:
     """Register a new user with hashed password and default PLAYER role.
 
-    Raises ValueError if username already exists.
+    Raises ValueError if username already exists or password confirmation does not match.
     """
+    if confirm_password is not None and password != confirm_password:
+        raise ValueError("Passwords do not match.")
+
     normalized_username = username.strip().lower()
 
     # Check for existing user

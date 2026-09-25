@@ -82,6 +82,33 @@ async def _extract_credentials(request: Request) -> tuple[str, str]:
     return str(form.get("username", "")).strip(), str(form.get("password", ""))
 
 
+async def _extract_registration_credentials(
+    request: Request,
+) -> tuple[str, str, str | None]:
+    """Helper to extract username, password, and optional confirm_password from form data or JSON body."""
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            confirm = body.get("confirm_password")
+            confirm_str = str(confirm) if confirm is not None else None
+            return (
+                str(body.get("username", "")).strip(),
+                str(body.get("password", "")),
+                confirm_str,
+            )
+        except Exception:
+            return "", "", None
+    form = await request.form()
+    confirm = form.get("confirm_password")
+    confirm_str = str(confirm) if confirm is not None else None
+    return (
+        str(form.get("username", "")).strip(),
+        str(form.get("password", "")),
+        confirm_str,
+    )
+
+
 def _is_json_request(request: Request) -> bool:
     """Check if request accepts or expects JSON."""
     content_type = request.headers.get("content-type", "")
@@ -122,7 +149,7 @@ async def register_submit(
     if user:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
-    username, password = await _extract_credentials(request)
+    username, password, confirm_password = await _extract_registration_credentials(request)
     is_json = _is_json_request(request)
 
     # 1. Validate username
@@ -140,7 +167,7 @@ async def register_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    # 2. Validate password
+    # 2. Validate password complexity
     valid_p, p_error = validate_password(password)
     if not valid_p:
         if is_json:
@@ -155,9 +182,29 @@ async def register_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    # 3. Create user in database
+    # 3. Validate password confirmation
+    if confirm_password is not None and password != confirm_password:
+        mismatch_error = "Passwords do not match."
+        if is_json:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": mismatch_error},
+            )
+        return templates.TemplateResponse(
+            request=request,
+            name="auth/register.html",
+            context={"username": username, "error": mismatch_error, "user": None},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # 4. Create user in database
     try:
-        new_user = register_user(db, username=username, password=password)
+        new_user = register_user(
+            db,
+            username=username,
+            password=password,
+            confirm_password=confirm_password,
+        )
     except ValueError as e:
         err_msg = str(e)
         if is_json:

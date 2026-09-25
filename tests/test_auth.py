@@ -1,11 +1,13 @@
 import pytest
 from fastapi import Depends, HTTPException, status
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.enums.role import UserRole
 from app.main import app
 from app.models.user import User
+from app.schemas.auth import UserRegisterSchema
 from app.routes.auth import (
     SESSION_COOKIE_NAME,
     get_current_user,
@@ -40,7 +42,11 @@ def test_valid_registration_succeeds(client: TestClient, db_session: Session):
     """Verify valid registration redirects to /login?registered=1 and stores user with PLAYER role."""
     response = client.post(
         "/register",
-        data={"username": "playeralice", "password": "Password1$"},
+        data={
+            "username": "playeralice",
+            "password": "Password1$",
+            "confirm_password": "Password1$",
+        },
         follow_redirects=False,
     )
     assert response.status_code == status.HTTP_303_SEE_OTHER
@@ -51,6 +57,118 @@ def test_valid_registration_succeeds(client: TestClient, db_session: Session):
     assert user.username == "playeralice"
     assert user.role == UserRole.PLAYER
     assert user.created_at is not None
+
+
+def test_registration_page_renders_confirm_password_field(client: TestClient):
+    """Verify registration page renders password and confirm_password inputs with required attributes."""
+    response = client.get("/register")
+    assert response.status_code == status.HTTP_200_OK
+    html = response.text
+    assert 'id="confirm_password"' in html
+    assert 'name="confirm_password"' in html
+    assert 'type="password"' in html
+    assert 'autocomplete="new-password"' in html
+    assert 'for="confirm_password"' in html
+    assert "Confirm Password" in html
+
+
+def test_registration_matching_passwords_succeeds_json(
+    client: TestClient, db_session: Session
+):
+    """Verify JSON registration with matching passwords succeeds with HTTP 201."""
+    response = client.post(
+        "/register",
+        json={
+            "username": "jsonmatchuser",
+            "password": "Password1$",
+            "confirm_password": "Password1$",
+        },
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data["username"] == "jsonmatchuser"
+
+    user = get_user_by_username(db_session, "jsonmatchuser")
+    assert user is not None
+    assert user.role == UserRole.PLAYER
+
+
+def test_registration_non_matching_passwords_rejected_form(client: TestClient):
+    """Verify form registration with non-matching passwords is rejected with HTTP 400."""
+    response = client.post(
+        "/register",
+        data={
+            "username": "mismatchplayer",
+            "password": "Password1$",
+            "confirm_password": "DifferentPassword1%",
+        },
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Passwords do not match." in response.text
+    # Username preserved in input value
+    assert 'value="mismatchplayer"' in response.text
+    # Plaintext password is never echoed back in the response
+    assert "Password1$" not in response.text
+    assert "DifferentPassword1%" not in response.text
+
+
+def test_registration_non_matching_passwords_rejected_json(client: TestClient):
+    """Verify JSON registration with non-matching passwords is rejected with HTTP 400."""
+    response = client.post(
+        "/register",
+        json={
+            "username": "mismatchjson",
+            "password": "Password1$",
+            "confirm_password": "DifferentPassword1%",
+        },
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Passwords do not match."
+
+
+def test_registration_empty_confirm_password_rejected(client: TestClient):
+    """Verify registration fails when confirm_password is empty string."""
+    response = client.post(
+        "/register",
+        data={
+            "username": "emptyconfirm",
+            "password": "Password1$",
+            "confirm_password": "",
+        },
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Passwords do not match." in response.text
+
+
+def test_register_user_service_password_mismatch_raises(db_session: Session):
+    """Verify register_user service function raises ValueError when confirm_password does not match."""
+    with pytest.raises(ValueError, match="Passwords do not match."):
+        register_user(
+            db_session,
+            username="servicefailuser",
+            password="Password1$",
+            confirm_password="MismatchPassword1$",
+        )
+
+
+def test_user_register_schema_validation():
+    """Verify UserRegisterSchema validates password matching."""
+    # Matching succeeds
+    schema = UserRegisterSchema(
+        username="validuser",
+        password="Password1$",
+        confirm_password="Password1$",
+    )
+    assert schema.username == "validuser"
+
+    # Mismatch raises ValidationError
+    with pytest.raises(ValidationError) as exc_info:
+        UserRegisterSchema(
+            username="validuser",
+            password="Password1$",
+            confirm_password="MismatchPassword1$",
+        )
+    assert "Passwords do not match." in str(exc_info.value)
 
 
 def test_username_shorter_than_required_fails(client: TestClient):
