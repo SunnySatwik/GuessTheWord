@@ -26,6 +26,7 @@
             this.bindEvents();
             this.bindKeyboardEvents();
             this.checkInitialGame();
+            this.initIdleWatcher();
         },
 
         cacheElements() {
@@ -876,16 +877,11 @@
         },
 
         /**
-         * Page initialization: check for demo param or game_id
+         * Page initialization: check for active game_id or daily limit
          */
         checkInitialGame() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get("demo") === "1") {
-                    this.runDemo();
-                    return;
-                }
-
                 const gameId = urlParams.get("game_id") || (this.elements.container ? this.elements.container.dataset.gameId : null);
                 const isDailyLimitReached = this.elements.container && this.elements.container.dataset.dailyLimitReached === "true";
 
@@ -1195,46 +1191,7 @@
             }
         },
 
-        /**
-         * Safe demonstration helper showing all states when ?demo=1 is present
-         */
-        runDemo() {
-            // Row 0: Filled typed state (unsubmitted)
-            ['C', 'R', 'A', 'N', 'E'].forEach((ch, c) => {
-                this.setTileLetter(0, c, ch);
-            });
 
-            // Row 1: Correct evaluation state (emerald green)
-            ['P', 'L', 'A', 'N', 'T'].forEach((ch, c) => {
-                this.setTileLetter(1, c, ch);
-                this.setTileState(1, c, 'correct');
-            });
-
-            // Row 2: Present evaluation state (warm amber)
-            ['W', 'A', 'T', 'E', 'R'].forEach((ch, c) => {
-                this.setTileLetter(2, c, ch);
-                this.setTileState(2, c, 'present');
-            });
-
-            // Row 3: Absent evaluation state (muted slate)
-            ['G', 'H', 'O', 'S', 'T'].forEach((ch, c) => {
-                this.setTileLetter(3, c, ch);
-                this.setTileState(3, c, 'absent');
-            });
-
-            // Row 4: Mixed Wordle evaluation row
-            const mixed = [
-                { ch: 'B', st: 'correct' },
-                { ch: 'E', st: 'present' },
-                { ch: 'A', st: 'absent' },
-                { ch: 'C', st: 'correct' },
-                { ch: 'H', st: 'absent' },
-            ];
-            mixed.forEach((item, c) => {
-                this.setTileLetter(4, c, item.ch);
-                this.setTileState(4, c, item.st);
-            });
-        },
 
         /**
          * Foundational UI state helper for toggling state panels
@@ -1291,13 +1248,13 @@
             const badge = this.elements.statusBadge;
             badge.className = "status-badge";
             if (status === "in-progress") {
-                badge.classList.add("in-progress");
+                badge.classList.add("in-progress", "is-active");
                 badge.textContent = label || "In Progress";
             } else if (status === "won") {
-                badge.classList.add("won");
+                badge.classList.add("won", "is-won");
                 badge.textContent = label || "Won";
             } else if (status === "lost") {
-                badge.classList.add("lost");
+                badge.classList.add("lost", "is-lost");
                 badge.textContent = label || "Lost";
             } else {
                 badge.textContent = label || "Ready";
@@ -1320,15 +1277,15 @@
             if (!pipEls) return;
             pipEls.forEach((pip, idx) => {
                 const pipNum = idx + 1; // pips are 1-indexed via data-pip
-                pip.classList.remove("is-done", "is-active", "is-won", "is-lost");
+                pip.classList.remove("is-done", "is-used", "is-active", "is-current", "is-won", "is-lost");
                 if (status === "won") {
                     if (pipNum <= attempts) pip.classList.add("is-won");
                 } else if (status === "lost") {
                     if (pipNum <= attempts) pip.classList.add("is-lost");
                 } else {
                     // in-progress or ready
-                    if (pipNum < attempts + 1) pip.classList.add("is-done");
-                    else if (pipNum === attempts + 1) pip.classList.add("is-active");
+                    if (pipNum < attempts + 1) pip.classList.add("is-done", "is-used");
+                    else if (pipNum === attempts + 1) pip.classList.add("is-active", "is-current");
                 }
             });
         },
@@ -1347,6 +1304,38 @@
                     seg.classList.remove("is-used");
                 }
             });
+        },
+
+        /**
+         * Presentation-only idle watcher for ambient game world choreography.
+         * Adds 'is-idle' class to game container after 6.5s of inactivity.
+         * Instantly removes 'is-idle' on any interaction.
+         */
+        initIdleWatcher() {
+            const container = this.elements.container;
+            if (!container) return;
+
+            let idleTimer = null;
+            const IDLE_DELAY_MS = 6500;
+
+            const setIdle = () => {
+                if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                    return;
+                }
+                container.classList.add("is-idle");
+            };
+
+            const resetIdle = () => {
+                container.classList.remove("is-idle");
+                if (idleTimer) clearTimeout(idleTimer);
+                idleTimer = setTimeout(setIdle, IDLE_DELAY_MS);
+            };
+
+            ["mousemove", "keydown", "touchstart", "pointerdown", "scroll"].forEach(evtName => {
+                window.addEventListener(evtName, resetIdle, { passive: true });
+            });
+
+            idleTimer = setTimeout(setIdle, IDLE_DELAY_MS);
         }
     };
 

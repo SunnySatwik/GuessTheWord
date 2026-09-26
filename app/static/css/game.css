@@ -1,113 +1,580 @@
 /* ============================================================================
-   Guess the Word - Premium Gaming UI (Phase Redesign)
-   Visual-only redesign. All game logic, IDs, classes, and JS remain unchanged.
+   Guess the Word — Commercial Casual Game Visual Experience (Art Direction Pass)
+   Senior Product Design & Creative Frontend Architecture.
+   All functional selectors, IDs, attributes, contracts, and tests strictly preserved.
    ============================================================================ */
 
 /* ============================================================================
-   Design Token System
+   1. Design Token System & Palette Architecture
    ============================================================================ */
 :root {
-    --stage-max-width: 350px;
-    --controls-max-width: 500px;
-    --game-container-max-width: 520px;
+    --stage-max-width: 380px;
+    --controls-max-width: 520px;
+    --game-container-max-width: 560px;
+    --board-gap: 8px;
 
-    --bg-deep:     #06080f;
-    --bg-surface:  #111827;
-    --bg-card:     rgba(17, 24, 39, 0.85);
+    /* Deep Cosmic Midnight Palette */
+    --bg-universe:       #040711;
+    --bg-stage-base:     #080d1c;
+    --bg-surface-elev:   rgba(15, 23, 42, 0.78);
+    --bg-surface-card:   rgba(11, 18, 35, 0.88);
+    --bg-glass-stroke:   rgba(255, 255, 255, 0.08);
 
-    --accent:       #22d3ee;
-    --accent-dim:   rgba(34, 211, 238, 0.18);
-    --accent-glow:  rgba(34, 211, 238, 0.35);
+    /* Electric Neon Accents */
+    --cyan-core:         #06b6d4;
+    --cyan-glow:         #22d3ee;
+    --cyan-bright:       #67e8f9;
+    --cyan-aura:         rgba(34, 211, 238, 0.42);
+    --cyan-aura-soft:    rgba(34, 211, 238, 0.14);
 
-    --violet:     #818cf8;
-    --violet-dim: rgba(129, 140, 248, 0.15);
+    /* Cosmic Violet Accent */
+    --violet-core:       #6366f1;
+    --violet-glow:       #818cf8;
+    --violet-bright:     #a5b4fc;
+    --violet-aura:       rgba(129, 140, 248, 0.38);
+    --violet-aura-soft:  rgba(129, 140, 248, 0.12);
 
-    --color-tile-empty:          rgba(11, 15, 26, 0.75);
-    --color-tile-border:         rgba(51, 65, 85, 0.6);
-    --color-tile-border-filled:  rgba(99, 102, 241, 0.55);
-    --color-tile-bg-filled:      rgba(99, 102, 241, 0.12);
+    /* Jewel Tile State Tokens */
+    --emerald-light:     #34d399;
+    --emerald-mid:       #10b981;
+    --emerald-deep:      #059669;
+    --emerald-dark:      #064e3b;
+    --emerald-glow:      rgba(16, 185, 129, 0.52);
+    --emerald-aura:      rgba(16, 185, 129, 0.18);
 
-    --color-tile-correct:        #059669;
-    --color-tile-correct-border: #10b981;
-    --color-tile-correct-glow:   rgba(16, 185, 129, 0.28);
+    --amber-light:       #fbbf24;
+    --amber-mid:         #f59e0b;
+    --amber-deep:        #d97706;
+    --amber-dark:        #78350f;
+    --amber-glow:        rgba(245, 158, 11, 0.48);
+    --amber-aura:        rgba(245, 158, 11, 0.16);
 
-    --color-tile-present:        #b45309;
-    --color-tile-present-border: #d97706;
-    --color-tile-present-glow:   rgba(217, 119, 6, 0.25);
+    --slate-tile-top:    #334155;
+    --slate-tile-mid:    #1e293b;
+    --slate-tile-bot:    #0f172a;
+    --slate-tile-border: #475569;
+    --slate-text:        #94a3b8;
 
-    --color-tile-absent:         #1e293b;
-    --color-tile-absent-border:  #334155;
-    --color-tile-absent-text:    #64748b;
+    /* Tile Physical Properties (Functional Selectors Preserved) */
+    --color-tile-empty:          rgba(12, 18, 36, 0.92);
+    --color-tile-border:         rgba(51, 65, 85, 0.7);
+    --color-tile-border-filled:  rgba(99, 102, 241, 0.85);
+    --color-tile-bg-filled:      rgba(99, 102, 241, 0.22);
 
-    --color-badge-bg:        rgba(34, 211, 238, 0.1);
+    --color-tile-correct:        var(--emerald-mid);
+    --color-tile-correct-border: var(--emerald-light);
+    --color-tile-correct-glow:   var(--emerald-glow);
+
+    --color-tile-present:        var(--amber-mid);
+    --color-tile-present-border: var(--amber-light);
+    --color-tile-present-glow:   var(--amber-glow);
+
+    --color-tile-absent:         var(--slate-tile-mid);
+    --color-tile-absent-border:  var(--slate-tile-border);
+    --color-tile-absent-text:    var(--slate-text);
+
+    /* Status Badge Colors */
+    --color-badge-bg:        rgba(34, 211, 238, 0.12);
     --color-badge-text:      #22d3ee;
     --color-badge-active:    #34d399;
-    --color-badge-active-bg: rgba(52, 211, 153, 0.1);
+    --color-badge-active-bg: rgba(52, 211, 153, 0.14);
     --color-badge-lost:      #f87171;
-    --color-badge-lost-bg:   rgba(248, 113, 113, 0.1);
+    --color-badge-lost-bg:   rgba(248, 113, 113, 0.14);
 
-    --text-primary:   #f0f6ff;
-    --text-secondary: #64748b;
-    --text-muted:     #3b4a66;
+    /* Typography & Surfaces */
+    --text-primary:   #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted:     #64748b;
+    --border-color:   rgba(51, 65, 85, 0.6);
 
-    --border-color:  rgba(51, 65, 85, 0.55);
+    /* Shadows & Radii */
+    --shadow-tile: 0 4px 12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    --shadow-card: 0 18px 45px -8px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--bg-glass-stroke);
+    --shadow-pedestal: 0 24px 60px -12px rgba(0, 0, 0, 0.9), 0 0 45px -8px rgba(34, 211, 238, 0.2);
 
-    --shadow-tile: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
-    --shadow-card: 0 8px 32px rgba(0,0,0,0.55);
-
-    --radius-tile: 6px;
-    --radius-card: 14px;
-    --radius-btn:  10px;
+    --radius-tile: 11px;
+    --radius-card: 16px;
+    --radius-btn:  12px;
     --radius-pill: 9999px;
 
+    /* Physics Curves */
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out:    cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* ============================================================================
-   Atmospheric Animated Background (CSS only, zero extra DOM nodes)
+   2. Atmospheric Living Background (Layer 1 Cosmos)
    ============================================================================ */
 
 body:has(.game-page-container) {
-    background: var(--bg-deep);
+    background-color: var(--bg-universe);
     overflow-x: hidden;
+    position: relative;
 }
 
+/* Allow game stage and ambient cosmos to utilize the desktop viewport without 800px constraint */
+body:has(.game-page-container) main.container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0.35rem 1.5rem 1.5rem !important;
+    box-sizing: border-box;
+}
+
+/* Deep Cosmic Lighting Nebula */
 body:has(.game-page-container)::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: 0;
     background:
-        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(34,211,238,0.055) 0%, transparent 65%),
-        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(129,140,248,0.045) 0%, transparent 60%),
-        linear-gradient(170deg, #08101e 0%, #06080f 60%, #0a0d18 100%);
+        radial-gradient(ellipse 95% 70% at 12% 8%, rgba(6, 182, 212, 0.13) 0%, transparent 65%),
+        radial-gradient(ellipse 85% 65% at 88% 92%, rgba(99, 102, 241, 0.12) 0%, transparent 65%),
+        radial-gradient(circle 540px at 50% 45%, rgba(245, 158, 11, 0.045) 0%, transparent 60%),
+        linear-gradient(175deg, #070b16 0%, #040711 50%, #060913 100%);
     pointer-events: none;
 }
 
+/* Subtle Cosmic Grid Mesh Texture */
 body:has(.game-page-container)::after {
     content: '';
     position: fixed;
     inset: 0;
     z-index: 0;
-    background:
-        radial-gradient(circle 420px at 15% 15%, rgba(34,211,238,0.06) 0%, transparent 70%),
-        radial-gradient(circle 350px at 85% 75%, rgba(129,140,248,0.055) 0%, transparent 70%);
-    animation: ambientDrift 22s ease-in-out infinite alternate;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 25%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 25%, transparent 80%);
     pointer-events: none;
-    will-change: transform;
-}
-
-@keyframes ambientDrift {
-    0%   { transform: translate(0,0) scale(1); }
-    33%  { transform: translate(18px,-12px) scale(1.03); }
-    66%  { transform: translate(-12px,20px) scale(0.97); }
-    100% { transform: translate(8px,8px) scale(1.01); }
+    opacity: 0.65;
 }
 
 /* ============================================================================
-   Layout & Container
+   3. Ambient Decorative World Elements (Living Environment)
+   ============================================================================ */
+
+.game-ambient-world {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    contain: layout size style;
+}
+
+/* Floating Luminous Orbs */
+.ambient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(85px);
+    opacity: 0.6;
+    will-change: transform;
+}
+
+.ambient-orb-cyan {
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.3) 0%, rgba(6, 182, 212, 0.08) 60%, transparent 75%);
+    top: -8%;
+    left: -6%;
+    animation: orbOrbitA 28s ease-in-out infinite alternate;
+}
+
+.ambient-orb-violet {
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, rgba(129, 140, 248, 0.26) 0%, rgba(99, 102, 241, 0.07) 60%, transparent 75%);
+    bottom: -12%;
+    right: -10%;
+    animation: orbOrbitB 34s ease-in-out infinite alternate;
+}
+
+.ambient-orb-amber {
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, rgba(217, 119, 6, 0.05) 60%, transparent 70%);
+    top: 38%;
+    left: 72%;
+    animation: orbPulseC 24s ease-in-out infinite alternate;
+}
+
+@keyframes orbOrbitA {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(50px, 65px) scale(1.08); }
+    100% { transform: translate(-35px, 95px) scale(0.94); }
+}
+
+@keyframes orbOrbitB {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(-65px, -50px) scale(1.06); }
+    100% { transform: translate(40px, -85px) scale(0.96); }
+}
+
+@keyframes orbPulseC {
+    0%   { transform: translate(0, 0) scale(0.95); opacity: 0.35; }
+    50%  { transform: translate(-30px, 40px) scale(1.1); opacity: 0.65; }
+    100% { transform: translate(25px, -25px) scale(1); opacity: 0.45; }
+}
+
+/* Subtle Animated Stardust Matrix */
+.ambient-dust-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 48%, black 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 48%, black 20%, transparent 75%);
+    animation: stardustGlimmer 16s ease-in-out infinite alternate;
+    pointer-events: none;
+    opacity: 0.45;
+}
+
+@keyframes stardustGlimmer {
+    0%   { opacity: 0.3; transform: scale(0.99); }
+    50%  { opacity: 0.6; transform: scale(1.01); }
+    100% { opacity: 0.35; transform: scale(1); }
+}
+
+/* Floating Translucent 3D Holographic Letter Tokens */
+.ambient-deco-tile {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(15, 23, 42, 0.55) 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-weight: 900;
+    user-select: none;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+    will-change: transform;
+    animation: decoTileFloat var(--drift-dur, 18s) ease-in-out infinite alternate;
+    animation-delay: var(--drift-delay, 0s);
+    perspective: 600px;
+    transform-style: preserve-3d;
+}
+
+.ambient-deco-tile .deco-tile-face {
+    display: block;
+    line-height: 1;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    text-shadow: inherit;
+    white-space: nowrap !important;
+}
+
+/* Staggered Spatial Depths & Accents (Framed in peripheral wings) */
+.deco-tile-1 {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+    top: 14%;
+    left: clamp(16px, 6vw, 110px);
+    --rot: -10deg;
+    --tilt-x: 12deg;
+    --tilt-y: -8deg;
+    color: #67e8f9;
+    border-color: rgba(34, 211, 238, 0.35);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 0 22px rgba(34, 211, 238, 0.28);
+    text-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+}
+
+.deco-tile-2 {
+    width: 44px;
+    height: 44px;
+    font-size: 1.15rem;
+    top: 36%;
+    right: clamp(16px, 6vw, 110px);
+    left: auto;
+    --rot: 14deg;
+    --tilt-x: -10deg;
+    --tilt-y: 12deg;
+    color: #a5b4fc;
+    border-color: rgba(129, 140, 248, 0.35);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 0 20px rgba(129, 140, 248, 0.25);
+    text-shadow: 0 0 12px rgba(129, 140, 248, 0.6);
+}
+
+.deco-tile-3 {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+    bottom: 24%;
+    top: auto;
+    left: clamp(20px, 7vw, 130px);
+    --rot: 8deg;
+    --tilt-x: 14deg;
+    --tilt-y: -6deg;
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.32);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 0 16px rgba(245, 158, 11, 0.22);
+    text-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+}
+
+.deco-tile-4 {
+    width: 46px;
+    height: 46px;
+    font-size: 1.2rem;
+    bottom: 18%;
+    top: auto;
+    right: clamp(20px, 7vw, 130px);
+    left: auto;
+    --rot: -12deg;
+    --tilt-x: -8deg;
+    --tilt-y: 10deg;
+    color: #6ee7b7;
+    border-color: rgba(52, 211, 153, 0.35);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 0 20px rgba(16, 185, 129, 0.25);
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+.deco-tile-5 {
+    width: 42px;
+    height: 42px;
+    font-size: 1.1rem;
+    top: 12%;
+    right: clamp(24px, 8vw, 140px);
+    left: auto;
+    --rot: 18deg;
+    --tilt-x: -12deg;
+    --tilt-y: -10deg;
+    color: #67e8f9;
+    border-color: rgba(34, 211, 238, 0.3);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 0 18px rgba(34, 211, 238, 0.22);
+    text-shadow: 0 0 10px rgba(34, 211, 238, 0.6);
+}
+
+@keyframes decoTileFloat {
+    0% {
+        transform: translateY(0px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) rotateZ(var(--rot, 0deg)) scale(1);
+    }
+    50% {
+        transform: translateY(-20px) rotateX(calc(var(--tilt-x, 0deg) + 5deg)) rotateY(calc(var(--tilt-y, 0deg) - 4deg)) rotateZ(calc(var(--rot, 0deg) + 6deg)) scale(1.04);
+    }
+    100% {
+        transform: translateY(14px) rotateX(calc(var(--tilt-x, 0deg) - 4deg)) rotateY(calc(var(--tilt-y, 0deg) + 5deg)) rotateZ(calc(var(--rot, 0deg) - 5deg)) scale(0.96);
+    }
+}
+
+/* Wandering Ghost Letter Tile — Drifting in distant zero gravity */
+.ambient-ghost-tile {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    top: 26%;
+    left: clamp(10px, 3.5vw, 65px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.06) 0%, rgba(15, 23, 42, 0.4) 100%);
+    border: 1px solid rgba(129, 140, 248, 0.22);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 14px rgba(129, 140, 248, 0.18);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: rgba(165, 180, 252, 0.55);
+    font-size: 0.95rem;
+    font-weight: 800;
+    user-select: none;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+    will-change: transform, opacity;
+    animation: ghostTileDrift var(--drift-dur, 28s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes ghostTileDrift {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(-6deg) scale(0.9);
+        opacity: 0.05;
+    }
+    30% {
+        opacity: 0.38;
+        transform: translate3d(40px, -22px, 0) rotate(4deg) scale(1.04);
+    }
+    70% {
+        opacity: 0.25;
+        transform: translate3d(70px, 15px, 0) rotate(-2deg) scale(0.98);
+    }
+    100% {
+        transform: translate3d(110px, -10px, 0) rotate(8deg) scale(0.85);
+        opacity: 0.02;
+    }
+}
+
+/* Miniature Isometric Tile Stack drifting in deep parallax */
+.ambient-tile-stack {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    bottom: 14%;
+    left: clamp(10px, 4vw, 75px);
+    perspective: 500px;
+    transform-style: preserve-3d;
+    pointer-events: none !important;
+    user-select: none;
+    white-space: nowrap !important;
+    will-change: transform;
+    animation: tileStackFloat var(--drift-dur, 34s) ease-in-out infinite alternate;
+    opacity: 0.45;
+}
+
+.ambient-tile-stack .stack-layer {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(15, 23, 42, 0.5) 100%);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.ambient-tile-stack .layer-3 { transform: translateZ(-16px) translateY(10px) rotateX(45deg) rotateZ(30deg); }
+.ambient-tile-stack .layer-2 { transform: translateZ(-8px) translateY(5px) rotateX(45deg) rotateZ(30deg); }
+.ambient-tile-stack .layer-1 {
+    transform: translateZ(0) rotateX(45deg) rotateZ(30deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #67e8f9;
+    font-size: 0.85rem;
+    font-weight: 900;
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+    white-space: nowrap !important;
+}
+
+@keyframes tileStackFloat {
+    0%   { transform: translateY(0) rotate(-4deg); }
+    50%  { transform: translateY(-18px) rotate(6deg) scale(1.05); }
+    100% { transform: translateY(12px) rotate(-8deg) scale(0.95); }
+}
+
+/* Subtle Ethereal Word Fragments drifting across deep cosmos */
+.ambient-word-fragment {
+    position: absolute;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    user-select: none;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+    width: max-content !important;
+    display: inline-block;
+    writing-mode: horizontal-tb !important;
+    word-break: normal !important;
+    will-change: transform, opacity;
+}
+
+.fragment-1 {
+    top: 14%;
+    right: clamp(24px, 11vw, 200px);
+    left: auto;
+    color: rgba(103, 232, 249, 0.2);
+    text-shadow: 0 0 16px rgba(34, 211, 238, 0.35);
+    animation: fragmentDrift1 var(--drift-dur, 26s) ease-in-out infinite alternate;
+}
+
+.fragment-2 {
+    bottom: 22%;
+    left: clamp(24px, 9vw, 170px);
+    color: rgba(253, 230, 138, 0.18);
+    text-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
+    animation: fragmentDrift2 var(--drift-dur, 32s) ease-in-out infinite alternate;
+}
+
+.fragment-words {
+    bottom: 30%;
+    right: clamp(24px, 10vw, 180px);
+    left: auto;
+    color: rgba(165, 180, 252, 0.18);
+    text-shadow: 0 0 14px rgba(129, 140, 248, 0.3);
+    animation: fragmentDrift1 var(--drift-dur, 28s) ease-in-out infinite alternate;
+}
+
+@keyframes fragmentDrift1 {
+    0%   { transform: translate(0, 0) scale(0.96); opacity: 0.08; }
+    50%  { transform: translate(-25px, 15px) scale(1.04); opacity: 0.26; }
+    100% { transform: translate(15px, -18px) scale(0.98); opacity: 0.10; }
+}
+
+@keyframes fragmentDrift2 {
+    0%   { transform: translate(0, 0) scale(0.95); opacity: 0.06; }
+    50%  { transform: translate(28px, -20px) scale(1.05); opacity: 0.22; }
+    100% { transform: translate(-18px, 14px) scale(0.97); opacity: 0.08; }
+}
+
+/* Ambient Decorative Orbital Rings */
+.ambient-deco-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px dashed rgba(34, 211, 238, 0.16);
+    pointer-events: none;
+}
+
+.deco-ring-1 {
+    width: 540px;
+    height: 540px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: ringSpin 55s linear infinite;
+    opacity: 0.45;
+}
+
+.deco-ring-2 {
+    width: 760px;
+    height: 760px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-color: rgba(129, 140, 248, 0.12);
+    animation: ringSpinRev 75s linear infinite;
+    opacity: 0.35;
+}
+
+@keyframes ringSpin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes ringSpinRev {
+    from { transform: translate(-50%, -50%) rotate(360deg); }
+    to   { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+/* Geometric Crosshair Accents */
+.ambient-crosshair {
+    position: absolute;
+    color: rgba(34, 211, 238, 0.32);
+    font-size: 0.95rem;
+    font-weight: 300;
+    line-height: 1;
+    user-select: none;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+    width: max-content !important;
+    animation: crosshairTwinkle 6s ease-in-out infinite alternate;
+}
+
+.crosshair-1 { top: 22%; left: clamp(30px, 14vw, 240px); animation-delay: 0s; }
+.crosshair-2 { top: 60%; right: clamp(30px, 13vw, 220px); left: auto; animation-delay: 2s; }
+.crosshair-3 { bottom: 15%; left: clamp(30px, 15vw, 260px); top: auto; animation-delay: 4s; }
+
+@keyframes crosshairTwinkle {
+    0%   { opacity: 0.2; transform: scale(0.85); }
+    50%  { opacity: 0.75; transform: scale(1.2); }
+    100% { opacity: 0.25; transform: scale(0.9); }
+}
+
+/* ============================================================================
+   4. Page Container & Layout System (Composed Game Console)
    ============================================================================ */
 
 .game-page-container {
@@ -119,53 +586,92 @@ body:has(.game-page-container)::after {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.1rem;
-    padding: 0.75rem 1rem 2rem;
+    gap: 0.65rem;
+    padding: 0.25rem 0.75rem 1.5rem;
+    box-sizing: border-box;
 }
 
 .tabular { font-variant-numeric: tabular-nums; }
 .is-hidden { display: none !important; }
 
 /* ============================================================================
-   Game Header
+   5. Compact Game Header (Arcade Title Presentation)
    ============================================================================ */
 
 .game-header {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0 0.05rem;
     text-align: center;
-    padding: 0.5rem 0 0.1rem;
+}
+
+/* Header Chip Badge */
+.header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.2rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: rgba(34, 211, 238, 0.08);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    box-shadow: 0 0 14px rgba(34, 211, 238, 0.18);
+}
+
+.badge-pulsar {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan-glow);
+    box-shadow: 0 0 8px var(--cyan-glow);
+    animation: pulsarBeat 1.8s ease-in-out infinite;
+}
+
+@keyframes pulsarBeat {
+    0%, 100% { opacity: 0.5; transform: scale(0.9); }
+    50%      { opacity: 1; transform: scale(1.3); box-shadow: 0 0 12px var(--cyan-glow); }
+}
+
+.badge-text {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cyan-bright);
 }
 
 .header-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.1rem;
 }
 
 .game-title {
-    font-size: 1.55rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
+    font-size: 1.65rem;
+    font-weight: 900;
+    letter-spacing: -0.025em;
     margin: 0;
-    background: linear-gradient(135deg, #e0f2fe 0%, #22d3ee 45%, #818cf8 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #67e8f9 35%, #818cf8 70%, #c084fc 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    /* No filter here — gradient text + filter causes blur in Safari/Chrome */
+    text-shadow: 0 2px 20px rgba(34, 211, 238, 0.25);
 }
 
 .game-subtitle {
     font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-muted);
     margin: 0;
 }
 
 /* ============================================================================
-   Status Bar / Meta Row
+   6. Premium HUD Bar (Cockpit Telemetry Panel)
    ============================================================================ */
 
 .game-meta {
@@ -173,11 +679,14 @@ body:has(.game-page-container)::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 0.65rem 1.25rem;
-    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.05);
+    background: linear-gradient(165deg, rgba(17, 24, 39, 0.94) 0%, rgba(10, 15, 30, 0.96) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.7);
+    border-radius: var(--radius-card);
+    padding: 0.55rem 1.3rem;
+    box-shadow:
+        0 14px 35px -8px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
 }
@@ -189,478 +698,516 @@ body:has(.game-page-container)::after {
     gap: 0.1rem;
 }
 
+.hud-attempts { min-width: 80px; }
+.hud-status   { min-width: 90px; }
+.hud-daily    { min-width: 80px; align-items: center; }
+
 .meta-label {
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: 0.62rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.09em;
+    letter-spacing: 0.1em;
     color: var(--text-muted);
 }
 
 .meta-value {
-    font-size: 0.9rem;
-    font-weight: 800;
+    font-size: 0.92rem;
+    font-weight: 900;
     color: var(--text-primary);
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
 }
 
+/* Status Badge */
 .status-badge {
     display: inline-block;
-    padding: 0.2rem 0.7rem;
+    padding: 0.22rem 0.75rem;
     border-radius: var(--radius-pill);
     font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     background: var(--color-badge-bg);
     color: var(--color-badge-text);
-    border: 1px solid rgba(34,211,238,0.22);
+    border: 1px solid rgba(34, 211, 238, 0.28);
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.18);
     text-transform: uppercase;
+    transition: all 0.25s var(--ease-smooth);
 }
 
+.status-badge.is-active,
 .status-badge.in-progress,
-.status-badge.won {
+.status-badge.is-in-progress {
+    background: rgba(34, 211, 238, 0.15);
+    color: #67e8f9;
+    border-color: rgba(34, 211, 238, 0.45);
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+}
+
+.status-badge.won,
+.status-badge.is-won {
     background: var(--color-badge-active-bg);
     color: var(--color-badge-active);
-    border-color: rgba(52,211,153,0.28);
+    border-color: rgba(52, 211, 153, 0.45);
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
 }
 
-.status-badge.lost {
+.status-badge.lost,
+.status-badge.is-lost {
     background: var(--color-badge-lost-bg);
     color: var(--color-badge-lost);
-    border-color: rgba(248,113,113,0.25);
+    border-color: rgba(248, 113, 113, 0.4);
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.25);
 }
 
-/* ============================================================================
-   HUD — Attempt Pip Indicators
-   ============================================================================ */
-
-.hud-attempts { min-width: 72px; }
-.hud-status   { min-width: 80px; }
-.hud-daily    { min-width: 72px; align-items: center; }
-
+/* Attempt Indicator: 5 Segmented Pip Dots */
 .attempt-pips {
     display: flex;
-    gap: 5px;
+    gap: 6px;
     align-items: center;
-    margin: 0.2rem 0 0.15rem;
+    margin: 0.15rem 0 0.1rem;
 }
 
 .attempt-pip {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    border: 1.5px solid rgba(51,65,85,0.7);
-    background: rgba(11,15,26,0.6);
-    transition: background 0.2s var(--ease-smooth), border-color 0.2s var(--ease-smooth), box-shadow 0.2s var(--ease-smooth);
+    background: rgba(15, 23, 42, 0.9);
+    border: 1.5px solid rgba(51, 65, 85, 0.85);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+    transition: transform 0.25s var(--ease-spring), background-color 0.25s var(--ease-smooth), border-color 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth);
 }
 
+.attempt-pip.is-used,
 .attempt-pip.is-done {
-    background: rgba(99,102,241,0.55);
-    border-color: rgba(99,102,241,0.8);
+    background: rgba(51, 65, 85, 0.95);
+    border-color: rgba(100, 116, 139, 0.8);
 }
 
+.attempt-pip.is-current,
 .attempt-pip.is-active {
-    background: var(--accent);
-    border-color: #67e8f9;
-    box-shadow: 0 0 6px rgba(34,211,238,0.5);
-    animation: pipPulse 1.8s ease-in-out infinite;
+    background: var(--cyan-glow);
+    border-color: #a5f3fc;
+    box-shadow: 0 0 10px var(--cyan-glow);
+    transform: scale(1.15);
+    animation: pipEnergy 1.6s ease-in-out infinite alternate;
 }
 
 .attempt-pip.is-won {
-    background: #34d399;
+    background: var(--emerald-light);
     border-color: #6ee7b7;
-    box-shadow: 0 0 5px rgba(52,211,153,0.4);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
 }
 
 .attempt-pip.is-lost {
-    background: rgba(248,113,113,0.4);
-    border-color: rgba(248,113,113,0.6);
+    background: rgba(248, 113, 113, 0.45);
+    border-color: rgba(248, 113, 113, 0.75);
 }
 
-@keyframes pipPulse {
-    0%,100% { box-shadow: 0 0 4px rgba(34,211,238,0.4); }
-    50%      { box-shadow: 0 0 9px rgba(34,211,238,0.7); }
+@keyframes pipEnergy {
+    0%   { box-shadow: 0 0 6px rgba(34, 211, 238, 0.5); transform: scale(1); }
+    100% { box-shadow: 0 0 14px rgba(34, 211, 238, 0.95); transform: scale(1.2); }
 }
 
-/* ── Daily segmented meter ── */
-
+/* Daily Limit Segmented Battery Meter */
 .daily-segs {
     display: flex;
-    gap: 4px;
+    gap: 5px;
     align-items: center;
-    margin: 0.2rem 0 0.15rem;
+    margin: 0.15rem 0 0.1rem;
 }
 
 .daily-seg {
-    width: 18px;
-    height: 7px;
+    width: 20px;
+    height: 8px;
     border-radius: 3px;
-    background: rgba(11,15,26,0.6);
-    border: 1px solid rgba(51,65,85,0.6);
-    transition: background 0.25s var(--ease-smooth), box-shadow 0.25s var(--ease-smooth);
+    background: rgba(11, 15, 26, 0.85);
+    border: 1px solid rgba(51, 65, 85, 0.75);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+    transition: background 0.3s var(--ease-smooth), box-shadow 0.3s var(--ease-smooth);
 }
 
 .daily-seg.is-used {
-    background: linear-gradient(90deg, #0891b2, #22d3ee);
-    border-color: rgba(34,211,238,0.5);
-    box-shadow: 0 0 5px rgba(34,211,238,0.25);
+    background: linear-gradient(90deg, #0891b2 0%, #22d3ee 100%);
+    border-color: #67e8f9;
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
 }
 
 /* ============================================================================
-   State-Ready: Intentional Empty State
+   7. State Panels (Ready, Completed, Limit, Loading, Error)
    ============================================================================ */
 
+.game-state-container {
+    width: 100%;
+}
+
+.state-panel {
+    border-radius: var(--radius-card);
+    padding: 0.9rem 1.25rem;
+    text-align: center;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    transition: opacity 0.25s var(--ease-smooth);
+}
+
+/* State-Ready Mission Card — Sleek, Integrated Command Briefing */
 .state-ready {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(165deg, rgba(17, 24, 39, 0.92) 0%, rgba(11, 16, 32, 0.96) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.9rem;
-    padding: 1.25rem 1.25rem 1.1rem;
-    animation: panelFadeIn 0.4s var(--ease-out) both;
+    gap: 0.55rem;
+    padding: 0.75rem 1.25rem;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    animation: panelFadeIn 0.35s var(--ease-out) both;
 }
 
 @keyframes panelFadeIn {
-    0%   { opacity: 0; transform: translateY(6px); }
+    0%   { opacity: 0; transform: translateY(8px); }
     100% { opacity: 1; transform: translateY(0); }
+}
+
+.ready-badge-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--cyan-bright);
+    background: rgba(34, 211, 238, 0.08);
+    border: 1px solid rgba(34, 211, 238, 0.22);
+    border-radius: var(--radius-pill);
+    padding: 0.18rem 0.6rem;
+    text-transform: uppercase;
+}
+
+.chip-glow-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--cyan-glow);
+    box-shadow: 0 0 6px var(--cyan-glow);
 }
 
 .ready-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.45rem;
     width: 100%;
 }
 
 .state-message {
     color: var(--text-secondary);
     margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.55;
-    max-width: 340px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    max-width: 360px;
 }
 
-/* Color-key hint */
+/* Color Key Rules Hint */
 .rules-hint {
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
-    gap: 1rem;
+    gap: 1.1rem;
     flex-wrap: wrap;
     justify-content: center;
     font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--text-muted);
+    font-weight: 700;
+    color: var(--text-secondary);
     letter-spacing: 0.02em;
 }
 
 .rules-hint li {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
 }
 
 .hint-swatch {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 13px;
+    height: 13px;
     border-radius: 3px;
     flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-.swatch-correct { background: var(--color-tile-correct); }
-.swatch-present { background: var(--color-tile-present); }
-.swatch-absent  { background: var(--color-tile-absent-border); border: 1px solid rgba(51,65,85,0.8); }
-
-/* ============================================================================
-   State-Limit: Session Complete Card
-   ============================================================================ */
-
-.state-limit {
-    background: linear-gradient(160deg, rgba(245,158,11,0.07) 0%, rgba(17,24,39,0.88) 100%);
-    border: 1px solid rgba(245,158,11,0.28);
-    color: #fcd34d;
-    border-radius: var(--radius-card);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 1.25rem 1.25rem 1rem;
-    text-align: center;
-    animation: panelFadeIn 0.4s var(--ease-out) both;
+.swatch-correct {
+    background: linear-gradient(135deg, var(--emerald-light), var(--emerald-deep));
+    border: 1px solid var(--emerald-light);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
 }
 
-.limit-icon {
-    font-size: 0.55rem;
-    letter-spacing: 3px;
-    color: rgba(245,158,11,0.7);
-    margin-bottom: 0.1rem;
-    line-height: 1;
+.swatch-present {
+    background: linear-gradient(135deg, var(--amber-light), var(--amber-deep));
+    border: 1px solid var(--amber-light);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
 }
 
-.limit-tag {
-    display: inline-block;
-    font-weight: 700;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 0.1rem;
-    color: #fcd34d;
-}
-
-.limit-message {
-    margin: 0;
-    font-size: 0.82rem;
-    color: #fef3c7;
-    max-width: 300px;
-    line-height: 1.5;
-}
-
-.limit-segs {
-    display: flex;
-    gap: 5px;
-    margin-top: 0.5rem;
-}
-
-.limit-seg {
-    width: 28px;
-    height: 8px;
-    border-radius: 4px;
-    background: rgba(245,158,11,0.2);
-    border: 1px solid rgba(245,158,11,0.3);
-    transition: background 0.3s;
-}
-
-.limit-seg.is-full {
-    background: linear-gradient(90deg, #d97706, #f59e0b);
-    border-color: rgba(245,158,11,0.5);
-    box-shadow: 0 0 6px rgba(245,158,11,0.2);
+.swatch-absent {
+    background: var(--slate-tile-top);
+    border: 1px solid var(--slate-tile-border);
 }
 
 /* ============================================================================
-   Buttons — Micro-interactions
+   8. Tactile Game Action Buttons (Arcade Feel)
    ============================================================================ */
-
 
 .btn-game-action {
     position: relative;
     min-height: 44px;
-    padding: 0.65rem 1.8rem;
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    padding: 0.7rem 2.2rem;
+    font-size: 0.95rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     border-radius: var(--radius-btn);
     cursor: pointer;
     border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
-    color: #051c26;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #22d3ee 0%, #0891b2 50%, #0369a1 100%);
+    color: #041822;
+    border-bottom: 3.5px solid #075985;
     box-shadow:
-        0 4px 15px rgba(34,211,238,0.32),
-        0 1px 3px rgba(0,0,0,0.35),
-        inset 0 1px 0 rgba(255,255,255,0.18),
-        inset 0 -1px 0 rgba(0,0,0,0.12);
+        0 6px 22px rgba(34, 211, 238, 0.42),
+        0 2px 4px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
     transition:
-        transform 0.15s var(--ease-spring),
-        box-shadow 0.15s var(--ease-smooth),
-        background 0.15s var(--ease-smooth);
-    /* No idle animation by default — only primary CTA pulses */
+        transform 0.14s var(--ease-spring),
+        box-shadow 0.14s var(--ease-smooth),
+        border-bottom-width 0.14s var(--ease-smooth);
     overflow: hidden;
+    will-change: transform;
 }
 
-/* Only the primary Start Game button idles with a subtle pulse */
-#action-start-game:not(:disabled):not(.is-loading) {
-    animation: btnPulse 4s ease-in-out infinite;
+/* Idle Breathing Glow for Primary Action */
+#action-start-game:not(:disabled):not(.is-loading),
+#action-play-again:not(:disabled):not(.is-loading) {
+    animation: btnPulse 3.5s ease-in-out infinite;
 }
-
-.btn-game-action::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.12) 50%, transparent 65%);
-    transform: translateX(-100%);
-    transition: transform 0.5s var(--ease-smooth);
-    border-radius: inherit;
-}
-
-.btn-game-action:hover::after { transform: translateX(100%); }
 
 @keyframes btnPulse {
-    0%,100% { box-shadow: 0 4px 15px rgba(34,211,238,0.32), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15); }
-    50%      { box-shadow: 0 4px 22px rgba(34,211,238,0.52), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15); }
+    0%, 100% {
+        box-shadow:
+            0 6px 20px rgba(34, 211, 238, 0.38),
+            0 2px 4px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+    50% {
+        box-shadow:
+            0 8px 32px rgba(34, 211, 238, 0.65),
+            0 2px 4px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    }
 }
 
-.btn-game-action:hover {
-    transform: translateY(-2px) scale(1.015);
-    box-shadow: 0 8px 28px rgba(34,211,238,0.45), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.1);
+/* Tactile Hover Lift */
+.btn-game-action:hover:not(:disabled) {
+    transform: translateY(-2.5px) scale(1.02);
+    box-shadow:
+        0 10px 32px rgba(34, 211, 238, 0.55),
+        0 3px 8px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    border-bottom-width: 4px;
     animation: none;
 }
 
+/* Tactile Active Press Compression */
 .btn-game-action:active:not(:disabled) {
-    transform: translateY(1px) scale(0.985);
-    box-shadow: 0 2px 10px rgba(34,211,238,0.28), 0 1px 2px rgba(0,0,0,0.35), inset 0 2px 4px rgba(0,0,0,0.15);
+    transform: translateY(2px) scale(0.98);
+    border-bottom-width: 1px;
+    box-shadow:
+        0 2px 8px rgba(34, 211, 238, 0.25),
+        0 1px 2px rgba(0, 0, 0, 0.45),
+        inset 0 2px 4px rgba(0, 0, 0, 0.3);
     animation: none;
 }
 
 .btn-game-action:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(34,211,238,0.55), 0 4px 15px rgba(34,211,238,0.35);
+    box-shadow:
+        0 0 0 3px rgba(34, 211, 238, 0.65),
+        0 6px 20px rgba(34, 211, 238, 0.4);
     animation: none;
+}
+
+/* Light Sheen Sweep on Hover */
+.btn-game-action::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.25) 50%, transparent 65%);
+    transform: translateX(-100%);
+    transition: transform 0.55s var(--ease-smooth);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.btn-game-action:hover:not(:disabled)::after {
+    transform: translateX(100%);
 }
 
 .btn-game-action:disabled,
 .btn-game-action.is-loading {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-    animation: none;
+    transform: none !important;
+    box-shadow: none !important;
+    animation: none !important;
+    border-bottom-width: 2px !important;
 }
 
 .btn-spinner-sm {
     display: inline-block;
-    width: 0.85rem;
-    height: 0.85rem;
-    border: 2px solid rgba(5,28,38,0.3);
-    border-top-color: #051c26;
+    width: 0.95rem;
+    height: 0.95rem;
+    border: 2px solid rgba(4, 24, 34, 0.35);
+    border-top-color: #041822;
     border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    animation: spin 0.65s linear infinite;
     vertical-align: -0.1rem;
-    margin-right: 0.25rem;
+    margin-right: 0.3rem;
 }
 
 /* ============================================================================
-   Completion Panel
+   9. Completion Panels (Victory & Defeat Experiences)
    ============================================================================ */
 
 .state-completed {
-    background: var(--bg-card);
+    background: linear-gradient(165deg, rgba(17, 24, 39, 0.95) 0%, rgba(10, 15, 30, 0.98) 100%);
     border: 1px solid var(--border-color);
-    padding: 1.4rem 1.25rem;
+    padding: 1.35rem 1.4rem;
     border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: var(--shadow-card);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    transition: border-color 0.3s var(--ease-smooth), background 0.3s var(--ease-smooth);
-    /* Refined entrance — ease-out feels more premium than spring for a panel */
-    animation: panelRise 0.42s var(--ease-out) both;
-    transform-origin: center top;
+    animation: panelRise 0.45s var(--ease-out) both;
 }
 
 @keyframes panelRise {
-    0%   { opacity: 0; transform: translateY(-12px) scale(0.97); }
+    0%   { opacity: 0; transform: translateY(-16px) scale(0.96); }
     100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Icon badge pops in after panel settles */
-.state-completed .completion-icon {
-    animation: iconPop 0.38s var(--ease-spring) 0.22s both;
-}
-
-@keyframes iconPop {
-    0%   { transform: scale(0); opacity: 0; }
-    60%  { transform: scale(1.25); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-/* Target word card slides in */
-.state-completed .completion-target-card {
-    animation: targetSlideIn 0.35s var(--ease-out) 0.38s both;
-}
-
-@keyframes targetSlideIn {
-    0%   { opacity: 0; transform: translateY(8px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
-/* Action buttons settle in last */
-.state-completed .completion-actions {
-    animation: actionsSettle 0.3s var(--ease-out) 0.5s both;
-}
-
-@keyframes actionsSettle {
-    0%   { opacity: 0; transform: translateY(6px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
+/* Victory State (WON) */
 .state-completed.is-won {
-    border-color: rgba(16,185,129,0.40);
-    background: linear-gradient(160deg, rgba(16,185,129,0.09) 0%, rgba(6,185,129,0.03) 40%, rgba(17,24,39,0.92) 100%);
-    box-shadow: var(--shadow-card), 0 0 0 1px rgba(16,185,129,0.15), inset 0 1px 0 rgba(52,211,153,0.06);
+    border-color: rgba(16, 185, 129, 0.45);
+    box-shadow:
+        0 20px 50px -10px rgba(0, 0, 0, 0.85),
+        0 0 40px rgba(16, 185, 129, 0.22),
+        inset 0 1px 0 rgba(52, 211, 153, 0.25);
+}
+
+.state-completed.is-won .completion-icon-ring {
+    border-color: rgba(52, 211, 153, 0.35);
+    animation: iconRingPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes iconRingPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50%      { transform: scale(1.18); opacity: 1; border-color: rgba(52, 211, 153, 0.7); }
 }
 
 .state-completed.is-won .completion-icon {
-    color: #34d399;
-    background: rgba(16,185,129,0.12);
-    border: 1px solid rgba(16,185,129,0.3);
-    box-shadow: 0 0 16px rgba(16,185,129,0.28);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ecfdf5;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
 }
 
 .state-completed.is-won .completion-title {
-    color: #a7f3d0;
+    color: #34d399;
+    text-shadow: 0 0 24px rgba(52, 211, 153, 0.45);
 }
 
-.state-completed.is-won .completion-target {
-    color: #6ee7b7;
-    text-shadow: 0 0 18px rgba(52,211,153,0.38);
-}
-
+/* Defeat State (LOST) */
 .state-completed.is-lost {
-    border-color: rgba(244,63,94,0.22);
-    background: linear-gradient(170deg, rgba(244,63,94,0.05) 0%, rgba(17,24,39,0.9) 100%);
+    border-color: rgba(244, 63, 94, 0.35);
+    box-shadow:
+        0 20px 50px -10px rgba(0, 0, 0, 0.85),
+        0 0 30px rgba(244, 63, 94, 0.15),
+        inset 0 1px 0 rgba(244, 63, 94, 0.15);
 }
 
 .state-completed.is-lost .completion-icon {
-    color: #fb7185;
-    background: rgba(244,63,94,0.1);
-    border: 1px solid rgba(244,63,94,0.22);
+    background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    box-shadow: 0 0 14px rgba(248, 113, 113, 0.25);
 }
 
-.state-completed.is-lost .completion-target {
-    color: var(--accent);
-    text-shadow: 0 0 14px rgba(34,211,238,0.3);
+.state-completed.is-lost .completion-title {
+    color: #fca5a5;
 }
 
 .completion-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
+}
+
+.completion-icon-wrapper {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.completion-icon-ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(255, 255, 255, 0.15);
+    pointer-events: none;
 }
 
 .completion-icon {
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    font-weight: 800;
-    margin-bottom: 0.25rem;
+    font-size: 1.4rem;
+    font-weight: 900;
+    line-height: 1;
+    animation: iconPop 0.4s var(--ease-spring) 0.15s both;
+}
+
+@keyframes iconPop {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 .completion-title {
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-size: 1.35rem;
+    font-weight: 900;
     letter-spacing: -0.02em;
     color: var(--text-primary);
     margin: 0;
 }
 
 .completion-message {
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     margin: 0;
-    max-width: 340px;
+    max-width: 360px;
     line-height: 1.5;
 }
 
@@ -668,125 +1215,174 @@ body:has(.game-page-container)::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
-    margin: 0.75rem 0 0.5rem;
-    font-size: 0.825rem;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0.4rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
 }
 
 .completion-meta-row .meta-item-label {
     font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 700;
+    letter-spacing: 0.1em;
+    font-weight: 800;
     color: var(--text-muted);
 }
 
 .completion-attempts {
-    font-size: 0.95rem;
-    font-weight: 800;
+    font-size: 1.05rem;
+    font-weight: 900;
     color: var(--text-primary);
 }
 
+/* Secret Word Cipher Vault Card */
 .completion-target-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
-    margin: 0.8rem auto;
-    padding: 0.6rem 1.4rem;
-    background: rgba(6,8,15,0.65);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
+    margin: 0.85rem auto;
+    padding: 0.75rem 1.8rem;
+    background: linear-gradient(165deg, rgba(8, 12, 24, 0.85) 0%, rgba(4, 7, 16, 0.92) 100%);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(34, 211, 238, 0.15);
+    border-radius: 12px;
     width: fit-content;
     max-width: 100%;
+    animation: targetCardSlide 0.4s var(--ease-out) 0.3s both;
+}
+
+@keyframes targetCardSlide {
+    0%   { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 .target-card-label {
-    font-size: 0.62rem;
-    font-weight: 700;
+    font-size: 0.65rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.14em;
     color: var(--text-muted);
 }
 
 .completion-target {
-    font-size: 1.45rem;
+    font-size: 1.65rem;
     font-weight: 900;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--accent);
-}
-
-.completion-target-wrapper {
-    margin-top: 0.6rem;
-    font-size: 0.95rem;
-    color: var(--text-secondary);
+    color: var(--cyan-glow);
 }
 
 .completion-actions {
     display: flex;
     justify-content: center;
     margin-top: 1rem;
+    animation: actionsSettle 0.35s var(--ease-out) 0.45s both;
 }
 
-.btn-play-again { min-width: 148px; }
+@keyframes actionsSettle {
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.btn-play-again { min-width: 160px; }
 
 .completion-feedback {
     margin-top: 0.85rem;
-    padding: 0.55rem 0.9rem;
+    padding: 0.6rem 1rem;
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     line-height: 1.45;
     text-align: center;
 }
 
 .completion-feedback.is-limit {
-    background: rgba(245,158,11,0.1);
-    border: 1px solid rgba(245,158,11,0.3);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
     color: #fcd34d;
 }
 
 .completion-feedback.is-error {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.28);
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.32);
     color: #fca5a5;
 }
 
-/* ============================================================================
-   Other State Panels (loading, error)
-   ============================================================================ */
-
-.game-state-container { width: 100%; }
-
-.state-panel {
+/* Daily Limit Panel */
+.state-limit {
+    background: linear-gradient(160deg, rgba(245, 158, 11, 0.08) 0%, rgba(17, 24, 39, 0.92) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.32);
+    color: #fcd34d;
     border-radius: var(--radius-card);
-    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 1.25rem 1.4rem;
     text-align: center;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    transition: opacity 0.25s var(--ease-smooth);
+    animation: panelFadeIn 0.35s var(--ease-out) both;
 }
 
-/* ── State-Limit moved above, loading/error remain ── */
+.limit-icon {
+    font-size: 0.65rem;
+    letter-spacing: 4px;
+    color: rgba(245, 158, 11, 0.8);
+    line-height: 1;
+}
 
+.limit-tag {
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fcd34d;
+}
+
+.limit-message {
+    margin: 0;
+    font-size: 0.84rem;
+    color: #fef3c7;
+    max-width: 340px;
+    line-height: 1.5;
+}
+
+.limit-segs {
+    display: flex;
+    gap: 6px;
+    margin-top: 0.5rem;
+}
+
+.limit-seg {
+    width: 30px;
+    height: 9px;
+    border-radius: 4px;
+    background: rgba(245, 158, 11, 0.22);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.limit-seg.is-full {
+    background: linear-gradient(90deg, #d97706, #f59e0b);
+    border-color: rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Loading & Error Panels */
 .state-loading {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
     color: var(--text-secondary);
-    background: rgba(17,24,39,0.6);
+    background: rgba(17, 24, 39, 0.7);
     border: 1px dashed var(--border-color);
     border-radius: var(--radius-card);
-    font-size: 0.875rem;
 }
 
 .spinner {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border: 2px solid var(--border-color);
-    border-top-color: var(--accent);
+    border-top-color: var(--cyan-glow);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -794,31 +1390,31 @@ body:has(.game-page-container)::after {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .state-error {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.28);
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.32);
     color: #fca5a5;
     display: flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.6rem;
     border-radius: var(--radius-card);
 }
 
 .error-icon {
-    font-weight: 800;
+    font-weight: 900;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #ef4444;
     color: #fff;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     flex-shrink: 0;
 }
 
 /* ============================================================================
-   Main Game Stage & Board - Visual centerpiece
+   10. Main Game Stage & Board — THE HERO
    ============================================================================ */
 
 .game-stage {
@@ -828,68 +1424,191 @@ body:has(.game-page-container)::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0.6rem 0 0.5rem;
+    margin: 0.35rem auto 0.25rem;
+    perspective: 1000px;
+    box-sizing: border-box;
 }
 
-/* Ambient board glow via pseudo-element — GPU-composited, no filter on main element */
-.game-stage::before {
-    content: '';
+/* Stage Pedestal Platform */
+.stage-pedestal {
     position: absolute;
-    inset: -12px;
-    border-radius: calc(var(--radius-tile) + 12px);
-    background: radial-gradient(ellipse 100% 80% at 50% 50%, rgba(34,211,238,0.06) 0%, transparent 70%);
-    opacity: 0.6;
-    animation: stageGlow 6s ease-in-out infinite alternate;
+    inset: -14px;
+    border-radius: 20px;
+    background: radial-gradient(ellipse 120% 100% at 50% 35%, rgba(15, 23, 42, 0.95) 0%, rgba(7, 11, 22, 0.98) 100%);
+    border: 1px solid rgba(51, 65, 85, 0.75);
+    box-shadow:
+        var(--shadow-pedestal),
+        inset 0 1px 1px rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.8);
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
+    overflow: hidden;
 }
 
-@keyframes stageGlow {
-    0%   { opacity: 0.4; transform: scale(0.98); }
-    100% { opacity: 0.8; transform: scale(1.02); }
+/* Stage Ambient Spotlight Breathing */
+.pedestal-ambient-light {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 85% 70% at 50% 50%, rgba(34, 211, 238, 0.09) 0%, transparent 70%);
+    animation: pedestalBreathing 9s ease-in-out infinite alternate;
+    pointer-events: none;
+    transition: opacity 1.2s var(--ease-smooth), transform 1.2s var(--ease-smooth);
 }
 
+@keyframes pedestalBreathing {
+    0%   { opacity: 0.4; transform: scale(0.96); }
+    100% { opacity: 0.85; transform: scale(1.04); }
+}
+
+/* Atmospheric Aurora Sweep behind the Game Board */
+.pedestal-aurora-beam {
+    position: absolute;
+    inset: -30px -40px;
+    background: radial-gradient(ellipse 90% 40% at 50% 50%, rgba(34, 211, 238, 0.07) 0%, rgba(129, 140, 248, 0.05) 45%, transparent 75%);
+    transform: rotate(-8deg);
+    animation: auroraSweep 18s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(20px);
+    transition: opacity 1.2s var(--ease-smooth);
+}
+
+@keyframes auroraSweep {
+    0%   { transform: rotate(-10deg) translateY(-15px) scale(0.92); opacity: 0.35; }
+    50%  { transform: rotate(8deg) translateY(12px) scale(1.08); opacity: 0.75; }
+    100% { transform: rotate(-4deg) translateY(6px) scale(0.96); opacity: 0.45; }
+}
+
+/* Tournament Framing Brackets on Pedestal */
+.pedestal-bracket {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    border-color: rgba(34, 211, 238, 0.55);
+    border-style: solid;
+}
+
+.bracket-tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; border-top-left-radius: 4px; }
+.bracket-tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; border-top-right-radius: 4px; }
+.bracket-bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; border-bottom-left-radius: 4px; }
+.bracket-br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; border-bottom-right-radius: 4px; }
+
+/* Subtle Periodic Scan Sweep Across Stage */
+.stage-scan-sweep {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.05), transparent);
+    transform: skewX(-20deg);
+    animation: scanSweep 12s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes scanSweep {
+    0%, 80% { left: -100%; }
+    100%    { left: 200%; }
+}
+
+/* The 5x5 Game Board */
 .game-board {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-rows: repeat(5, 1fr);
-    gap: clamp(5px, 1.5vw, 8px);
+    gap: var(--board-gap, clamp(6px, 1.8vw, 9px));
     width: 100%;
     max-width: var(--stage-max-width);
     margin: 0 auto;
     box-sizing: border-box;
 }
 
+/* Idle Board Sheen Wave: subtle light catches the board every 14s */
+.game-board::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.04) 48%, rgba(34, 211, 238, 0.08) 50%, rgba(255, 255, 255, 0.04) 52%, transparent 60%);
+    transform: translateX(-150%) skewX(-15deg);
+    animation: boardIdleSheen 14s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 3;
+    border-radius: var(--radius-card);
+}
+
+@keyframes boardIdleSheen {
+    0%, 75% { transform: translateX(-150%) skewX(-15deg); }
+    100%    { transform: translateX(150%) skewX(-15deg); }
+}
+
 .board-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: clamp(5px, 1.5vw, 8px);
+    gap: var(--board-gap, clamp(6px, 1.8vw, 9px));
     width: 100%;
-    perspective: 800px;
-    transition: transform 0.12s var(--ease-smooth), box-shadow 0.12s var(--ease-smooth);
+    perspective: 1000px;
+    transition: transform 0.16s var(--ease-smooth), box-shadow 0.16s var(--ease-smooth);
+    border-radius: calc(var(--radius-tile) + 2px);
+    position: relative;
 }
 
-/* ── Active row: focused indigo outline breathing ── */
+/* ── Active Playable Row: "Your Move" Sensation ── */
 .board-row.is-active {
-    animation: activeRowPulse 3.5s ease-in-out infinite;
-    border-radius: calc(var(--radius-tile) + 3px);
+    animation: activeRowPulse 3.2s ease-in-out infinite alternate;
+}
+
+/* Side Target Chevrons on Active Row */
+.board-row.is-active::before,
+.board-row.is-active::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--cyan-glow);
+    box-shadow: 0 0 8px var(--cyan-glow);
+    transform: translateY(-50%);
+    pointer-events: none;
+    animation: chevronPulse 1.8s ease-in-out infinite alternate;
+}
+
+.board-row.is-active::before { left: -10px; }
+.board-row.is-active::after  { right: -10px; }
+
+@keyframes chevronPulse {
+    0%   { opacity: 0.4; transform: translateY(-50%) scaleY(0.85); }
+    100% { opacity: 1; transform: translateY(-50%) scaleY(1.15); }
 }
 
 .board-row.is-active .board-tile {
-    border-color: rgba(99, 102, 241, 0.38);
-    box-shadow: var(--shadow-tile), 0 0 0 1px rgba(99,102,241,0.08);
+    border-color: rgba(99, 102, 241, 0.45);
+    box-shadow:
+        var(--shadow-tile),
+        0 0 0 1px rgba(99, 102, 241, 0.15),
+        0 0 8px rgba(99, 102, 241, 0.10);
 }
 
 .board-row.is-active .board-tile.is-filled {
     border-color: var(--color-tile-border-filled);
-    box-shadow: var(--shadow-tile), 0 0 0 1px rgba(99,102,241,0.22), 0 0 10px rgba(99,102,241,0.12);
+    box-shadow:
+        var(--shadow-tile),
+        0 0 0 1px rgba(99, 102, 241, 0.35),
+        0 0 14px rgba(99, 102, 241, 0.25);
 }
 
 @keyframes activeRowPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
-    50%       { box-shadow: 0 0 12px 2px rgba(99,102,241,0.14); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    }
+    100% {
+        box-shadow: 0 0 18px 2px rgba(99, 102, 241, 0.22);
+    }
 }
 
-/* ── Submission anticipation: row compresses then rises ── */
+/* ── Submission Anticipation: Row Compresses & Rises ── */
 .board-row.is-submitting {
     animation: rowAnticipate 0.22s var(--ease-smooth) forwards;
 }
@@ -900,89 +1619,118 @@ body:has(.game-page-container)::after {
     100% { transform: scaleY(1) translateY(-1px); }
 }
 
-/* Dimensional tile with subtle inner surface lighting */
+/* ============================================================================
+   11. Dimensional Tactile Game Tiles (Physical Feel)
+   ============================================================================ */
+
 .board-tile {
     aspect-ratio: 1;
     width: 100%;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-tile-empty);
+    background: linear-gradient(180deg, rgba(16, 24, 44, 0.92) 0%, rgba(10, 16, 32, 0.96) 100%);
     border: 2px solid var(--color-tile-border);
+    border-bottom: 3px solid rgba(0, 0, 0, 0.55);
     border-radius: var(--radius-tile);
     color: var(--text-primary);
-    font-size: clamp(1.3rem, 4.5vw, 1.9rem);
-    font-weight: 800;
+    font-size: clamp(1.4rem, 4.8vw, 2.05rem);
+    font-weight: 900;
     line-height: 1;
     text-transform: uppercase;
     user-select: none;
     box-sizing: border-box;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    box-shadow: var(--shadow-tile);
+    box-shadow:
+        var(--shadow-tile),
+        inset 0 2px 4px rgba(0, 0, 0, 0.7),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.05);
     position: relative;
     will-change: transform;
     transition:
-        border-color 0.15s var(--ease-smooth),
-        background-color 0.15s var(--ease-smooth),
-        color 0.15s var(--ease-smooth),
-        box-shadow 0.15s var(--ease-smooth);
-    /* Note: transform NOT in transition — animated tiles use keyframes instead */
+        border-color 0.16s var(--ease-smooth),
+        background 0.16s var(--ease-smooth),
+        color 0.16s var(--ease-smooth),
+        box-shadow 0.16s var(--ease-smooth);
 }
 
+/* Top Bevel Glass Sheen Highlight */
 .board-tile::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: calc(var(--radius-tile) - 2px);
-    /* Subtle top-edge surface catch light */
-    background: linear-gradient(170deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.01) 40%, transparent 60%);
+    background: linear-gradient(170deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 45%, transparent 60%);
     pointer-events: none;
     z-index: 0;
 }
 
+/* Filled Tile State (Letter Entered, Unsubmitted) */
 .board-tile.is-filled {
     border-color: var(--color-tile-border-filled);
-    background: var(--color-tile-bg-filled);
-    box-shadow: var(--shadow-tile), 0 0 0 1px rgba(99,102,241,0.18);
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.28) 0%, rgba(49, 46, 129, 0.35) 100%);
+    border-bottom: 3.5px solid #4338ca;
+    color: #ffffff;
+    box-shadow:
+        var(--shadow-tile),
+        0 0 0 1px rgba(99, 102, 241, 0.35),
+        0 0 16px rgba(99, 102, 241, 0.28);
     animation: tilePopIn 0.16s var(--ease-spring);
-    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    text-shadow: 0 0 10px rgba(99, 102, 241, 0.6), 0 2px 4px rgba(0, 0, 0, 0.7);
+    transform: translateY(-1px);
 }
 
+/* Correct Evaluation Tile (Emerald Jewel) */
 .board-tile.is-correct {
-    background: var(--color-tile-correct);
+    background: linear-gradient(160deg, #10b981 0%, #059669 45%, #047857 85%, #064e3b 100%);
     border-color: var(--color-tile-correct-border);
+    border-bottom: 3.5px solid #064e3b;
     color: #ecfdf5;
-    box-shadow: 0 2px 10px var(--color-tile-correct-glow), var(--shadow-tile);
+    box-shadow:
+        0 4px 16px var(--color-tile-correct-glow),
+        var(--shadow-tile),
+        inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Present Evaluation Tile (Warm Golden Amber) */
 .board-tile.is-present {
-    background: var(--color-tile-present);
+    background: linear-gradient(160deg, #fbbf24 0%, #f59e0b 45%, #d97706 85%, #78350f 100%);
     border-color: var(--color-tile-present-border);
+    border-bottom: 3.5px solid #78350f;
     color: #fffbeb;
-    box-shadow: 0 2px 10px var(--color-tile-present-glow), var(--shadow-tile);
+    box-shadow:
+        0 4px 16px var(--color-tile-present-glow),
+        var(--shadow-tile),
+        inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Absent Evaluation Tile (Slate Graphite) */
 .board-tile.is-absent {
-    background: var(--color-tile-absent);
+    background: linear-gradient(160deg, #334155 0%, #1e293b 60%, #0f172a 100%);
     border-color: var(--color-tile-absent-border);
+    border-bottom: 3.5px solid #0f172a;
     color: var(--color-tile-absent-text);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.65);
 }
 
 .board-row.is-submitting .board-tile {
-    opacity: 0.82;
-    filter: brightness(1.05);
+    opacity: 0.85;
+    filter: brightness(1.08);
 }
 
-/* ── Tile enter: physical keystroke feel — quick spring ── */
+/* ── Tile Enter Keystroke Physics ── */
 @keyframes tilePopIn {
     0%   { transform: scale(0.82) translateY(3px); opacity: 0.6; }
-    55%  { transform: scale(1.07) translateY(-1px); opacity: 1; }
+    55%  { transform: scale(1.08) translateY(-2px); opacity: 1; }
     82%  { transform: scale(0.98) translateY(0); }
-    100% { transform: scale(1) translateY(0); }
+    100% { transform: scale(1) translateY(-1px); }
 }
 
-/* ── Tile remove: fast shrink + fade ── */
+/* ── Tile Backspace Removal ── */
 .board-tile.is-removing {
     animation: tileRemove 0.1s var(--ease-smooth) forwards;
 }
@@ -992,7 +1740,7 @@ body:has(.game-page-container)::after {
     100% { transform: scale(0.7); opacity: 0; }
 }
 
-/* ── 3D flip reveal: enhanced with post-land micro-bounce ── */
+/* ── 3D Flip Reveal Animation ── */
 .board-tile.is-revealing {
     animation: tileFlip 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
@@ -1001,60 +1749,59 @@ body:has(.game-page-container)::after {
     0%    { transform: rotateX(0deg) scale(1); }
     45%   { transform: rotateX(90deg) scale(1); }
     50%   { transform: rotateX(90deg) scale(1); }
-    75%   { transform: rotateX(0deg) scale(1.04); }
+    75%   { transform: rotateX(0deg) scale(1.05); }
     88%   { transform: rotateX(0deg) scale(0.97); }
     100%  { transform: rotateX(0deg) scale(1); }
 }
 
-/* ── Correct tile: emerald bloom on arrival ── */
+/* ── Emerald Arrival Bloom ── */
 .board-tile.is-correct:not(.is-revealing) {
     animation: tileBloomCorrect 0.35s var(--ease-out) both;
 }
 
 @keyframes tileBloomCorrect {
-    0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0), var(--shadow-tile); }
-    40%  { box-shadow: 0 0 0 6px rgba(16,185,129,0.22), var(--shadow-tile); }
-    100% { box-shadow: 0 2px 10px var(--color-tile-correct-glow), var(--shadow-tile); }
+    0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0), var(--shadow-tile); }
+    40%  { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0.32), var(--shadow-tile); }
+    100% { box-shadow: 0 4px 16px var(--color-tile-correct-glow), var(--shadow-tile); }
 }
 
-/* ── Present tile: warm amber bloom ── */
+/* ── Amber Arrival Bloom ── */
 .board-tile.is-present:not(.is-revealing) {
     animation: tileBloomPresent 0.35s var(--ease-out) both;
 }
 
 @keyframes tileBloomPresent {
-    0%   { box-shadow: 0 0 0 0 rgba(217,119,6,0), var(--shadow-tile); }
-    40%  { box-shadow: 0 0 0 5px rgba(217,119,6,0.2), var(--shadow-tile); }
-    100% { box-shadow: 0 2px 10px var(--color-tile-present-glow), var(--shadow-tile); }
+    0%   { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0), var(--shadow-tile); }
+    40%  { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0.28), var(--shadow-tile); }
+    100% { box-shadow: 0 4px 16px var(--color-tile-present-glow), var(--shadow-tile); }
 }
 
 /* ============================================================================
-   Board Game-State Treatments (Win / Loss)
+   12. Board Win / Loss Treatments
    ============================================================================ */
 
-/* ── WIN: emerald radial glow emanating from the board ── */
+/* ── WIN Celebration ── */
 .game-board.board-won {
     animation: boardWinGlow 1.2s var(--ease-out) forwards;
 }
 
 @keyframes boardWinGlow {
-    0%   { filter: drop-shadow(0 0 0px rgba(16,185,129,0)); }
-    35%  { filter: drop-shadow(0 0 28px rgba(16,185,129,0.45)); }
-    100% { filter: drop-shadow(0 0 14px rgba(16,185,129,0.22)); }
+    0%   { filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0)); }
+    35%  { filter: drop-shadow(0 0 34px rgba(16, 185, 129, 0.6)); }
+    100% { filter: drop-shadow(0 0 18px rgba(16, 185, 129, 0.3)); }
 }
 
-/* Winning tiles lift individually (staggered via nth-child) */
 .game-board.board-won .board-row:last-child .board-tile.is-correct {
-    animation: tileLiftWin 0.5s var(--ease-spring) 0.15s both;
+    animation: tileLiftWin 0.55s var(--ease-spring) 0.15s both;
 }
 
 @keyframes tileLiftWin {
     0%   { transform: scale(1) translateY(0); }
-    55%  { transform: scale(1.12) translateY(-5px); }
+    55%  { transform: scale(1.12) translateY(-6px); }
     100% { transform: scale(1) translateY(0); }
 }
 
-/* ── CSS sparkle particles (pseudo-elements on the board wrapper) ── */
+/* Sparkle particles on stage pedestal */
 .game-stage.board-won::before,
 .game-stage.board-won::after {
     content: '';
@@ -1081,22 +1828,21 @@ body:has(.game-page-container)::after {
 
 @keyframes sparkle {
     0%   { transform: scale(0) translateY(0); opacity: 1; }
-    60%  { transform: scale(1.5) translateY(-18px); opacity: 0.9; }
-    100% { transform: scale(0.2) translateY(-32px); opacity: 0; }
+    60%  { transform: scale(1.6) translateY(-20px); opacity: 0.9; }
+    100% { transform: scale(0.2) translateY(-36px); opacity: 0; }
 }
 
-/* ── LOSS: cool dim + restrained settling ── */
+/* ── LOSS Atmosphere ── */
 .game-board.board-lost {
     animation: boardLostSettle 0.8s var(--ease-smooth) forwards;
 }
 
 @keyframes boardLostSettle {
-    0%   { filter: drop-shadow(0 0 0px rgba(244,63,94,0)); opacity: 1; }
-    30%  { filter: drop-shadow(0 0 12px rgba(244,63,94,0.2)); opacity: 0.95; }
-    100% { filter: drop-shadow(0 0 4px rgba(244,63,94,0.08)); opacity: 0.88; }
+    0%   { filter: drop-shadow(0 0 0px rgba(244, 63, 94, 0)); opacity: 1; }
+    30%  { filter: drop-shadow(0 0 14px rgba(244, 63, 94, 0.25)); opacity: 0.95; }
+    100% { filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.1)); opacity: 0.88; }
 }
 
-/* Loss tiles gently settle downward */
 .game-board.board-lost .board-tile {
     animation: tileLostSettle 0.45s var(--ease-smooth) both;
 }
@@ -1108,31 +1854,30 @@ body:has(.game-page-container)::after {
 }
 
 /* ============================================================================
-   Inline Guess Feedback — Enhanced states with icon
+   13. Inline Guess Feedback
    ============================================================================ */
 
 .guess-feedback {
     width: 100%;
     max-width: var(--stage-max-width);
     min-height: 2.25rem;
-    margin: 0.1rem auto 0.2rem;
-    padding: 0.45rem 0.9rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    font-weight: 600;
+    margin: 0.15rem auto 0.25rem;
+    padding: 0.45rem 1rem;
+    border-radius: 9px;
+    font-size: 0.84rem;
+    font-weight: 700;
     text-align: center;
     letter-spacing: 0.02em;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
+    box-sizing: border-box;
+    border: 1px solid transparent;
     transition:
         opacity 0.2s var(--ease-smooth),
         border-color 0.2s var(--ease-smooth),
-        background-color 0.2s var(--ease-smooth),
-        transform 0.2s var(--ease-smooth);
-    box-sizing: border-box;
-    border: 1px solid transparent;
+        background-color 0.2s var(--ease-smooth);
 }
 
 .guess-feedback.is-hidden {
@@ -1142,44 +1887,44 @@ body:has(.game-page-container)::after {
     pointer-events: none;
     border-color: transparent !important;
     background: transparent !important;
-    transform: none !important;
 }
 
 .guess-feedback.is-error {
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.32);
+    background: rgba(239, 68, 68, 0.14);
+    border: 1px solid rgba(239, 68, 68, 0.35);
     color: #fca5a5;
-    animation: feedbackShake 0.3s var(--ease-smooth);
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.2);
+    animation: feedbackShake 0.32s var(--ease-smooth);
 }
 
 @keyframes feedbackShake {
-    0%,100% { transform: translateX(0); }
-    25%     { transform: translateX(-4px); }
-    75%     { transform: translateX(4px); }
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-5px); }
+    75%      { transform: translateX(5px); }
 }
 
 .guess-feedback.is-info {
-    background: rgba(34,211,238,0.08);
-    border: 1px solid rgba(34,211,238,0.25);
-    color: var(--accent);
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    color: var(--cyan-bright);
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
 }
 
 .guess-feedback.is-loading {
-    background: rgba(17,24,39,0.7);
+    background: rgba(17, 24, 39, 0.75);
     border: 1px dashed var(--border-color);
     color: var(--text-secondary);
 }
 
 .guess-feedback.is-success {
-    background: rgba(16,185,129,0.1);
-    border: 1px solid rgba(16,185,129,0.3);
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
     color: #6ee7b7;
 }
 
-/* Feedback icon — tiny CSS shapes via content on .feedback-icon */
 .feedback-icon {
     display: none;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     line-height: 1;
     flex-shrink: 0;
 }
@@ -1193,17 +1938,17 @@ body:has(.game-page-container)::after {
 .guess-feedback.is-info    .feedback-icon { display: inline; }
 
 .feedback-spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(148,163,184,0.25);
-    border-top-color: var(--accent);
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(148, 163, 184, 0.25);
+    border-top-color: var(--cyan-glow);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     display: inline-block;
 }
 
 /* ============================================================================
-   Game Start Entrance (board appears fresh on new game)
+   14. Game Start Board Entrance
    ============================================================================ */
 
 .game-stage.is-entering {
@@ -1211,31 +1956,27 @@ body:has(.game-page-container)::after {
 }
 
 @keyframes boardEnter {
-    0%   { opacity: 0; transform: scale(0.96) translateY(8px); }
+    0%   { opacity: 0; transform: scale(0.95) translateY(10px); }
     60%  { opacity: 1; transform: scale(1.01) translateY(-2px); }
     100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Tiles stagger-enter only on fresh game start */
 .game-stage.is-entering .board-tile {
     animation: tileEnterStagger 0.3s var(--ease-out) both;
 }
 
-.game-stage.is-entering .board-row:nth-child(1) .board-tile { animation-delay: calc(0.05s + var(--tile-delay, 0s)); }
-.game-stage.is-entering .board-row:nth-child(2) .board-tile { animation-delay: calc(0.10s + var(--tile-delay, 0s)); }
-.game-stage.is-entering .board-row:nth-child(3) .board-tile { animation-delay: calc(0.15s + var(--tile-delay, 0s)); }
-.game-stage.is-entering .board-row:nth-child(4) .board-tile { animation-delay: calc(0.20s + var(--tile-delay, 0s)); }
-.game-stage.is-entering .board-row:nth-child(5) .board-tile { animation-delay: calc(0.25s + var(--tile-delay, 0s)); }
+.game-stage.is-entering .board-row:nth-child(1) .board-tile { animation-delay: 0.05s; }
+.game-stage.is-entering .board-row:nth-child(2) .board-tile { animation-delay: 0.10s; }
+.game-stage.is-entering .board-row:nth-child(3) .board-tile { animation-delay: 0.15s; }
+.game-stage.is-entering .board-row:nth-child(4) .board-tile { animation-delay: 0.20s; }
+.game-stage.is-entering .board-row:nth-child(5) .board-tile { animation-delay: 0.25s; }
 
 @keyframes tileEnterStagger {
     0%   { opacity: 0; transform: scale(0.9); }
     100% { opacity: 1; transform: scale(1); }
 }
 
-/* ============================================================================
-   Interaction Stage (physical keyboard only)
-   ============================================================================ */
-
+/* Interaction controls (physical keyboard only) */
 .game-controls {
     width: 100%;
     max-width: var(--controls-max-width);
@@ -1247,72 +1988,133 @@ body:has(.game-page-container)::after {
 .game-controls:empty { display: none; }
 
 /* ============================================================================
-   Responsive Adaptations
+   15. Idle World Choreography (Triggers after 6.5s of player inactivity)
    ============================================================================ */
 
-@media (max-width: 768px) {
-    .game-page-container {
-        gap: 0.9rem;
-        padding: 0.5rem 0.85rem 1.5rem;
+.game-page-container.is-idle .pedestal-ambient-light {
+    opacity: 0.95;
+    transform: scale(1.08);
+}
+
+.game-page-container.is-idle .pedestal-aurora-beam {
+    opacity: 0.85;
+}
+
+body:has(.game-page-container.is-idle) .ambient-word-fragment {
+    opacity: 0.32;
+}
+
+.game-page-container.is-idle .header-badge .badge-pulsar {
+    animation-duration: 1.2s;
+    box-shadow: 0 0 14px var(--cyan-bright);
+}
+
+body:has(.game-page-container.is-idle) .ambient-deco-tile {
+    filter: brightness(1.15);
+}
+
+/* ============================================================================
+   16. Responsive Adaptations
+   ============================================================================ */
+
+@media (max-width: 900px) {
+    .ambient-deco-tile,
+    .ambient-ghost-tile,
+    .ambient-tile-stack,
+    .ambient-word-fragment {
+        opacity: 0.45;
+    }
+}
+
+@media (max-width: 640px) {
+    .ambient-deco-tile,
+    .ambient-ghost-tile,
+    .ambient-tile-stack,
+    .ambient-word-fragment,
+    .ambient-deco-ring,
+    .ambient-crosshair,
+    .pedestal-aurora-beam {
+        display: none !important;
+    }
+    .ambient-orb {
+        opacity: 0.35;
     }
 }
 
 @media (max-width: 480px) {
-    .game-page-container {
-        gap: 0.75rem;
-        padding: 0.25rem 0.55rem 1.25rem;
+    :root {
+        --board-gap: 6px;
     }
-    .game-title { font-size: 1.3rem; }
-    .game-meta { padding: 0.5rem 0.9rem; }
-    .meta-value { font-size: 0.82rem; }
-    .state-completed { padding: 1.1rem 0.9rem; }
-    .completion-title { font-size: 1.1rem; }
-    .completion-target { font-size: 1.25rem; letter-spacing: 0.15em; }
-    .completion-message { max-width: 100%; }
-    .btn-play-again { width: 100%; max-width: 280px; }
-    .btn-game-action { font-size: 0.875rem; padding: 0.65rem 1.4rem; }
-    /* HUD compact on mobile */
+    .game-page-container {
+        gap: 0.55rem;
+        padding: 0.25rem 0.5rem 1.25rem;
+    }
+    .game-title { font-size: 1.45rem; }
+    .game-meta { padding: 0.45rem 0.85rem; }
+    .meta-value { font-size: 0.85rem; }
+    .state-completed { padding: 1rem 0.85rem; }
+    .completion-title { font-size: 1.15rem; }
+    .completion-target { font-size: 1.35rem; letter-spacing: 0.16em; }
+    .btn-play-again { width: 100%; max-width: 290px; }
+    .btn-game-action { font-size: 0.9rem; padding: 0.65rem 1.4rem; min-height: 48px; }
     .attempt-pip { width: 9px; height: 9px; }
-    .daily-seg { width: 15px; height: 6px; }
-    .rules-hint { gap: 0.7rem; }
+    .daily-seg { width: 16px; height: 7px; }
+    .rules-hint { gap: 0.75rem; }
 }
 
-/* ─ 390px (mobile flagship) ─ */
+/* 390px (Mobile Flagship Precision) */
 @media (max-width: 400px) {
     :root {
         --stage-max-width: 100%;
         --game-container-max-width: 100%;
+        --board-gap: 5px;
     }
-    .game-page-container { padding: 0.25rem 0.4rem 1rem; }
+    .game-page-container {
+        padding: 0.2rem 0.4rem 1rem;
+        gap: 0.5rem;
+    }
     .game-meta {
-        padding: 0.4rem 0.55rem;
-        border-radius: 10px;
-        gap: 0;
+        padding: 0.4rem 0.6rem;
+        border-radius: 12px;
     }
-    .meta-label { font-size: 0.56rem; }
-    .meta-value { font-size: 0.76rem; }
-    .attempt-pip { width: 8px; height: 8px; gap: 3px; }
-    .attempt-pips { gap: 3px; }
-    .daily-seg { width: 13px; height: 6px; }
+    .meta-label { font-size: 0.58rem; }
+    .meta-value { font-size: 0.8rem; }
+    .attempt-pip { width: 8px; height: 8px; }
+    .attempt-pips { gap: 4px; }
+    .daily-seg { width: 14px; height: 6px; }
     .daily-segs { gap: 3px; }
-    .hud-attempts, .hud-daily { min-width: 60px; }
-    .hud-status { min-width: 68px; }
-    .rules-hint { gap: 0.55rem; font-size: 0.68rem; }
+    .hud-attempts, .hud-daily { min-width: 65px; }
+    .hud-status { min-width: 72px; }
+    .rules-hint { gap: 0.6rem; font-size: 0.68rem; }
+    .stage-pedestal { inset: -10px; border-radius: 14px; }
+    .btn-game-action { min-height: 48px; }
 }
 
 /* ============================================================================
-   Reduced Motion — disable decorative animations, keep functional ones
+   17. Reduced Motion Accessibility
    ============================================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-    /* Stop all decorative motion */
-    body:has(.game-page-container)::after {
-        animation: none !important;
-    }
-
-    .game-stage::before {
+    body:has(.game-page-container)::after,
+    .ambient-orb,
+    .ambient-dust-grid,
+    .ambient-deco-tile,
+    .ambient-ghost-tile,
+    .ambient-tile-stack,
+    .ambient-word-fragment,
+    .ambient-deco-ring,
+    .ambient-crosshair,
+    .badge-pulsar,
+    .pedestal-ambient-light,
+    .pedestal-aurora-beam,
+    .stage-scan-sweep,
+    .game-board::after,
+    .board-row.is-active::before,
+    .board-row.is-active::after,
+    .game-page-container.is-idle * {
         animation: none !important;
         opacity: 0 !important;
+        display: none !important;
     }
 
     .game-stage.is-entering {
@@ -1332,6 +2134,7 @@ body:has(.game-page-container)::after {
 
     .board-tile.is-filled {
         animation: none !important;
+        transform: none !important;
     }
 
     .board-tile.is-removing {
@@ -1340,12 +2143,11 @@ body:has(.game-page-container)::after {
 
     .attempt-pip {
         animation: none !important;
+        transform: none !important;
     }
 
-    #action-start-game {
-        animation: none !important;
-    }
-
+    #action-start-game,
+    #action-play-again,
     .btn-game-action {
         animation: none !important;
     }
@@ -1369,9 +2171,8 @@ body:has(.game-page-container)::after {
         filter: none !important;
     }
 
-    /* Keep functional transitions at reduced speed */
     .board-tile {
-        transition: border-color 0.1s, background-color 0.1s, color 0.1s !important;
+        transition: border-color 0.1s, background 0.1s, color 0.1s !important;
     }
 
     .guess-feedback {
@@ -1379,7 +2180,6 @@ body:has(.game-page-container)::after {
         animation: none !important;
     }
 
-    /* Completion panel: instant appear, no motion */
     .state-completed {
         animation: none !important;
         transform: none !important;
@@ -1393,15 +2193,12 @@ body:has(.game-page-container)::after {
         transform: none !important;
     }
 
-    /* Keep tile bloom off but restore final shadow state */
     .board-tile.is-correct:not(.is-revealing),
     .board-tile.is-present:not(.is-revealing) {
         animation: none !important;
     }
 
-    /* Preserve functional flip reveal */
     .board-tile.is-revealing {
         animation: tileFlip 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
     }
 }
-

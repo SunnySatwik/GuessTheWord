@@ -7,10 +7,68 @@
 {% endblock %}
 
 {% block content %}
+<!-- ═══ Atmospheric Ambient World (Fixed Viewport Layer, aria-hidden) ═══ -->
+<div class="game-ambient-world" aria-hidden="true">
+    <!-- Floating luminous ambient light orbs -->
+    <div class="ambient-orb ambient-orb-cyan"></div>
+    <div class="ambient-orb ambient-orb-violet"></div>
+    <div class="ambient-orb ambient-orb-amber"></div>
+
+    <!-- Subtle ambient drift dust particles -->
+    <div class="ambient-dust-grid"></div>
+
+    <!-- Floating translucent 3D decorative game letter tiles -->
+    <div class="ambient-deco-tile deco-tile-1" style="--drift-dur: 16s; --drift-delay: 0s;">
+        <span class="deco-tile-face">W</span>
+    </div>
+    <div class="ambient-deco-tile deco-tile-2" style="--drift-dur: 21s; --drift-delay: -5s;">
+        <span class="deco-tile-face">O</span>
+    </div>
+    <div class="ambient-deco-tile deco-tile-3" style="--drift-dur: 18s; --drift-delay: -10s;">
+        <span class="deco-tile-face">R</span>
+    </div>
+    <div class="ambient-deco-tile deco-tile-4" style="--drift-dur: 24s; --drift-delay: -3s;">
+        <span class="deco-tile-face">D</span>
+    </div>
+    <div class="ambient-deco-tile deco-tile-5" style="--drift-dur: 19s; --drift-delay: -7s;">
+        <span class="deco-tile-face">S</span>
+    </div>
+
+    <!-- Wandering ghost letter tile drifting across the deep atmosphere -->
+    <div class="ambient-ghost-tile" style="--drift-dur: 28s;">
+        <span class="deco-tile-face">A</span>
+    </div>
+
+    <!-- Miniature decorative isometric tile stack in distant parallax -->
+    <div class="ambient-tile-stack stack-1" style="--drift-dur: 34s;">
+        <span class="stack-layer layer-3"></span>
+        <span class="stack-layer layer-2"></span>
+        <span class="stack-layer layer-1">P</span>
+    </div>
+
+    <!-- Subtle ethereal word fragments drifting in deep space -->
+    <div class="ambient-word-fragment fragment-1" style="--drift-dur: 26s;">CIPHER</div>
+    <div class="ambient-word-fragment fragment-2" style="--drift-dur: 32s;">SOLVE</div>
+    <div class="ambient-word-fragment fragment-words" style="--drift-dur: 28s;">WORDS</div>
+
+    <!-- Ambient decorative orbital rings -->
+    <div class="ambient-deco-ring deco-ring-1"></div>
+    <div class="ambient-deco-ring deco-ring-2"></div>
+
+    <!-- Subtle geometric crosshair accents -->
+    <div class="ambient-crosshair crosshair-1">+</div>
+    <div class="ambient-crosshair crosshair-2">+</div>
+    <div class="ambient-crosshair crosshair-3">+</div>
+</div>
+
 <div class="game-page-container" data-game-id="{{ game_id or '' }}" data-daily-limit-reached="{% if games_today >= max_daily_games %}true{% else %}false{% endif %}">
 
     <!-- ═══ Compact Game Header ═══ -->
     <header class="game-header">
+        <div class="header-badge" aria-hidden="true">
+            <span class="badge-pulsar"></span>
+            <span class="badge-text">DAILY CIPHER CHALLENGE</span>
+        </div>
         <div class="header-content">
             <h2 class="game-title">Guess the Word</h2>
             <p class="game-subtitle">5-Letter Daily Word Challenge</p>
@@ -57,6 +115,10 @@
 
         <!-- Ready State -->
         <div class="state-panel state-ready" id="state-ready">
+            <div class="ready-badge-chip" aria-hidden="true">
+                <span class="chip-glow-dot"></span>
+                <span>MISSION BRIEFING</span>
+            </div>
             <div class="ready-content">
                 <p class="state-message">Guess the secret 5-letter word within 5 attempts.</p>
                 <ul class="rules-hint" aria-label="Color key">
@@ -73,7 +135,10 @@
         <!-- Completed State (Hidden Initially) -->
         <div class="state-panel state-completed is-hidden" id="state-completed" role="region" aria-label="Game Completion Summary" tabindex="-1">
             <div class="completion-header">
-                <div class="completion-icon" id="completion-icon" aria-hidden="true">&#10003;</div>
+                <div class="completion-icon-wrapper" aria-hidden="true">
+                    <div class="completion-icon-ring"></div>
+                    <div class="completion-icon" id="completion-icon" aria-hidden="true">&#10003;</div>
+                </div>
                 <h3 class="completion-title" id="completion-title">Game Finished</h3>
                 <p class="completion-message" id="completion-message"></p>
             </div>
@@ -126,6 +191,17 @@
 
     <!-- ═══ Main Game Board ═══ -->
     <main class="game-stage" id="game-stage" aria-label="Game board stage">
+        <!-- Physical stage pedestal & framing brackets (aria-hidden) -->
+        <div class="stage-pedestal" aria-hidden="true">
+            <div class="pedestal-ambient-light"></div>
+            <div class="pedestal-aurora-beam"></div>
+            <div class="pedestal-bracket bracket-tl"></div>
+            <div class="pedestal-bracket bracket-tr"></div>
+            <div class="pedestal-bracket bracket-bl"></div>
+            <div class="pedestal-bracket bracket-br"></div>
+            <div class="stage-scan-sweep"></div>
+        </div>
+
         <div class="game-board" id="game-board" role="grid" aria-label="5 by 5 guess board">
             {% for row in range(5) %}
             <div class="board-row" role="row" data-row="{{ row }}" aria-label="Row {{ row + 1 }}">
