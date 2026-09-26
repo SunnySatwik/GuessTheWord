@@ -23,7 +23,7 @@ Players have 5 attempts to guess a secret five-letter English word, with a daily
 
 | Requirement | Specification | Implementation | Status |
 |---|---|---|---|
-| **Framework** | Use Python (no Django) | Built with FastAPI, Starlette, and SQLAlchemy 2.x | Verified |
+| **Framework** | Use Python | Built with FastAPI, Starlette, and SQLAlchemy 2.x | Verified |
 | **User Roles** | Admin and Player roles | `UserRole` enum (`PLAYER`, `ADMIN`) with role-based access control dependencies | Verified |
 | **Registration & Login** | Separate registration and login | Server-rendered HTML forms and JSON endpoints (`/register`, `/login`, `/logout`) | Verified |
 | **Username Validation** | At least 5 letters, letters only | Validated with `isalpha()` and length $\ge 5$; normalized to lowercase | Verified |
